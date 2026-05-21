@@ -362,20 +362,38 @@ Se algum tópico realmente não foi mencionado no áudio, escreva "Não informad
       $sections.appendChild(el);
     } else {
       let cleanedText = '';
+      let renderedCount = 0;
       KEYS.forEach((key, i) => {
         const content = sections[key] || 'NAO INFORMADO';
+        
+        if (isNotMencionando(content)) {
+          return;
+        }
+        
         cleanedText += `- ${key}:\n${content}\n`;
+        renderedCount++;
         
         const meta = SECTION_MAP[key];
         const el = document.createElement('div');
         el.className = 'report-section';
-        el.style.animationDelay = `${i * 0.1}s`;
+        el.style.animationDelay = `${renderedCount * 0.1}s`;
         el.innerHTML = `
           <div class="section-tag ${meta.tag}">${meta.label}</div>
           <div class="section-content">${escapeHTML(content)}</div>
         `;
         $sections.appendChild(el);
       });
+      
+      if (renderedCount === 0) {
+        const el = document.createElement('div');
+        el.className = 'report-section';
+        el.innerHTML = `
+          <div class="section-tag tag-reclamacao">AVISO</div>
+          <div class="section-content">NENHUMA INFORMAÇÃO ESPECÍFICA DETECTADA NO ÁUDIO.</div>
+        `;
+        $sections.appendChild(el);
+      }
+      
       lastRawText = cleanedText.trim();
     }
 
@@ -763,3 +781,13 @@ function normalizeForNBS(text) {
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase();
 }
+
+function isNotMencionando(content) {
+  if (!content) return true;
+  const normalized = content.trim().toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.\s]/g, '');
+  return normalized === 'NAOINFORMADO' || normalized === '';
+}
+
