@@ -220,7 +220,7 @@ TÓPICOS OBRIGATÓRIOS:
 - RECLAMAÇÃO DO CLIENTE: Detalhe o sintoma ou problema relatado pelo cliente (ruídos, falhas, comportamentos).
 - DIAGNÓSTICO: Descreva a análise técnica do mecânico, causa raiz identificada, componentes afetados (incluindo folgas, avarias, desgastes) e códigos de peças associados a essa falha.
 - SERVIÇO EXECUTADO: Detalhe qualquer ação ou serviço já realizado (inspeções, testes de rodagem, desmontagens, diagnósticos preliminares). Informe também se há ações pendentes/planejadas (como aguardar peças ou dar continuidade). Só escreva "Não informado" se nenhuma atividade tiver sido realizada ou mencionada.
-- PEÇAS/INSUMOS: Liste todas as peças de reposição e insumos necessários, solicitados, em processo de pedido ou utilizados, acompanhados de seus códigos exatos.
+- PEÇAS: Liste todas as peças de reposição necessárias, solicitadas, em processo de pedido ou utilizadas, acompanhadas de seus códigos exatos.
 
 Se algum tópico realmente não foi mencionado no áudio, escreva "Não informado".`;
 
@@ -315,7 +315,7 @@ Se algum tópico realmente não foi mencionado no áudio, escreva "Não informad
     'RECLAMACAO DO CLIENTE': { tag: 'tag-reclamacao', label: '🗣 RECLAMACAO DO CLIENTE' },
     'DIAGNOSTICO':           { tag: 'tag-diagnostico', label: '🔍 DIAGNOSTICO' },
     'SERVICO EXECUTADO':     { tag: 'tag-servico',     label: '🔧 SERVICO EXECUTADO'    },
-    'PECAS/INSUMOS':         { tag: 'tag-pecas',       label: '📦 PECAS / INSUMOS'       }
+    'PECAS':                 { tag: 'tag-pecas',       label: '📦 PECAS'                 }
   };
 
   function renderReport(text) {
