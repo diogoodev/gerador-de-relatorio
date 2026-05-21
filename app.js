@@ -201,7 +201,7 @@ function initPC() {
       const prompt = `Você é um mestre mecânico de concessionária. Transcreva o áudio anexo e organize as informações estritamente nos seguintes tópicos: '- RECLAMAÇÃO DO CLIENTE:', '- DIAGNÓSTICO:', '- SERVIÇO EXECUTADO:', '- PEÇAS/INSUMOS:'. Corrija termos gramaticais, mantenha o jargão técnico correto e remova hesitações da fala. Se algum tópico não for mencionado no áudio, escreva "Não informado" como valor.`;
 
       const body = {
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         contents: [
           {
             parts: [
@@ -222,7 +222,7 @@ function initPC() {
       };
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
