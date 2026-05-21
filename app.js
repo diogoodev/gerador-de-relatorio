@@ -203,15 +203,24 @@ function initPC() {
       const base64 = await blobToBase64(blob);
       const mimeType = blob.type || 'audio/webm';
 
-      const prompt = `Você é um mestre mecânico experiente de concessionária. Transcreva o áudio anexo com muita atenção, extraindo TODAS as informações mencionadas sem omitir nenhum detalhe. Inclua todos os códigos de peças, números, prazos, nomes, medidas e qualquer dado técnico falado.
+      const prompt = `Você é um assistente de transcrição técnica para uma oficina mecânica de concessionária. Sua tarefa é ouvir o áudio com extrema atenção e transcrever fielmente TODAS as informações faladas, organizando-as nos tópicos abaixo.
 
-Organize as informações estritamente nos seguintes tópicos:
-- RECLAMAÇÃO DO CLIENTE:
-- DIAGNÓSTICO:
-- SERVIÇO EXECUTADO:
-- PEÇAS/INSUMOS:
+REGRA CRÍTICA SOBRE NÚMEROS E CÓDIGOS:
+- Transcreva códigos de peças, números de OS, valores, medidas e prazos EXATAMENTE como foram falados. NUNCA invente, arredonde ou altere um número. Se ouviu "22003388", escreva exatamente "22003388". Se não tem certeza de um número, escreva o que ouviu e adicione "(verificar)" ao lado.
 
-Correija termos gramaticais, mantenha o jargão técnico correto e remova hesitações da fala. Não inclua nenhuma introdução ou explicação antes dos tópicos. Comece diretamente com "- RECLAMAÇÃO DO CLIENTE:". Se algum tópico não for mencionado no áudio, escreva "Não informado" como valor.`;
+REGRAS DE CONTEÚDO:
+- NÃO resuma. Mantenha todos os detalhes técnicos mencionados.
+- Se o mecânico mencionou algo, mesmo que brevemente, inclua essa informação no tópico correspondente.
+- Corrija apenas hesitações da fala ("éh", "ah", "né") e erros gramaticais. Mantenha o jargão técnico.
+- Não inclua introdução ou explicação antes dos tópicos. Comece diretamente com "- RECLAMAÇÃO DO CLIENTE:".
+
+TÓPICOS OBRIGATÓRIOS:
+- RECLAMAÇÃO DO CLIENTE: O que o cliente relatou como problema. Sintomas, barulhos, comportamentos do veículo.
+- DIAGNÓSTICO: O que o mecânico identificou como causa. Inclua peças afetadas, tipo de defeito (folga, avaria, desgaste, etc.) e códigos de peças mencionados no diagnóstico.
+- SERVIÇO EXECUTADO: O que já foi feito até agora, mesmo que parcialmente. Inclua inspeções realizadas, desmontagens, serviços parciais. Se mencionou que vai dar continuidade depois, registre o que já foi feito e o que falta. Somente escreva "Não informado" se realmente NADA foi dito sobre serviços.
+- PEÇAS/INSUMOS: Liste TODAS as peças mencionadas com seus códigos exatos. Indique se foram usadas, solicitadas ou se estão aguardando chegada. Inclua quantidades se mencionadas.
+
+Se algum tópico realmente não foi mencionado no áudio, escreva "Não informado".`;
 
       const body = {
         contents: [
