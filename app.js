@@ -198,14 +198,21 @@ function initPC() {
       const base64 = await blobToBase64(blob);
       const mimeType = blob.type || 'audio/webm';
 
-      const prompt = `Voce e um mestre mecanico de concessionaria. Transcreva o audio anexo e organize as informacoes estritamente nos seguintes topicos: '- RECLAMACAO DO CLIENTE:', '- DIAGNOSTICO:', '- SERVICO EXECUTADO:', '- PECAS/INSUMOS:'.
+      const prompt = `Voce e um mestre mecanico experiente de concessionaria. Escute o audio anexo com MUITA ATENCAO e extraia TODAS as informacoes mencionadas, sem omitir nenhum detalhe. Inclua todos os codigos de pecas, numeros, prazos, nomes, medidas e qualquer dado tecnico falado.
 
-REGRAS OBRIGATORIAS:
-1. TODO o texto da resposta DEVE ser em LETRAS MAIUSCULAS.
-2. NAO use acentos, cedilhas ou caracteres especiais (exemplo: use "NAO" em vez de "NÃO", "SERVICO" em vez de "SERVIÇO", "RECLAMACAO" em vez de "RECLAMAÇÃO", "PECAS" em vez de "PEÇAS").
-3. NAO inclua nenhuma introducao, explicacao ou comentario. Comece DIRETAMENTE com "- RECLAMACAO DO CLIENTE:" sem nenhum texto antes.
-4. Corrija termos gramaticais, mantenha o jargao tecnico correto e remova hesitacoes da fala.
-5. Se algum topico nao for mencionado no audio, escreva "NAO INFORMADO" como valor.`;
+Organize TODAS as informacoes nos topicos abaixo:
+
+- RECLAMACAO DO CLIENTE:
+- DIAGNOSTICO:
+- SERVICO EXECUTADO:
+- PECAS/INSUMOS:
+
+IMPORTANTE - REGRAS DE FORMATACAO:
+- Escreva TUDO em LETRAS MAIUSCULAS.
+- NAO use acentos ou cedilhas (ex: SERVICO, NAO, RECLAMACAO, PECAS, DIAGNOSTICO).
+- NAO escreva nenhuma introducao ou explicacao. Comece direto com "- RECLAMACAO DO CLIENTE:".
+- Remova hesitacoes da fala (tipo "eh", "ah", "ne") mas MANTENHA todo o conteudo tecnico.
+- Se algum topico nao for mencionado, escreva "NAO INFORMADO".`;
 
       const body = {
         model: 'gemini-3.5-flash',
@@ -223,8 +230,8 @@ REGRAS OBRIGATORIAS:
           }
         ],
         generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2048
+          temperature: 0.3,
+          maxOutputTokens: 8192
         }
       };
 
