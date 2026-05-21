@@ -180,7 +180,7 @@ function initPC() {
     await processWithGemini(blob);
   }
 
-  // ── Gemini API ─────────────────────────────────────────
+  // ── Gemini API (Streaming) ──────────────────────────────
   async function processWithGemini(blob) {
     const apiKey = localStorage.getItem(STORAGE_KEY);
 
@@ -192,6 +192,11 @@ function initPC() {
 
     showState('processing');
     addLog('Enviando áudio para Gemini...', 'info');
+
+    // Stream preview element
+    const $streamPreview = document.getElementById('stream-preview');
+    $streamPreview.textContent = '';
+    $streamPreview.classList.remove('hidden');
 
     try {
       // Convert Blob → Base64
@@ -215,7 +220,6 @@ IMPORTANTE - REGRAS DE FORMATACAO:
 - Se algum topico nao for mencionado, escreva "NAO INFORMADO".`;
 
       const body = {
-        model: 'gemini-3.5-flash',
         contents: [
           {
             parts: [
@@ -236,7 +240,7 @@ IMPORTANTE - REGRAS DE FORMATACAO:
       };
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -249,16 +253,51 @@ IMPORTANTE - REGRAS DE FORMATACAO:
         throw new Error(errData?.error?.message || `HTTP ${res.status}`);
       }
 
-      const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      // Read SSE stream
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
 
-      if (!text) throw new Error('Resposta vazia da API Gemini.');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      lastRawText = text;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE events from buffer
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === '[DONE]') continue;
+
+            try {
+              const chunk = JSON.parse(jsonStr);
+              const chunkText = chunk?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (chunkText) {
+                fullText += chunkText;
+                $streamPreview.textContent = fullText;
+                $streamPreview.scrollTop = $streamPreview.scrollHeight;
+              }
+            } catch (parseErr) {
+              // Skip malformed JSON chunks
+            }
+          }
+        }
+      }
+
+      if (!fullText) throw new Error('Resposta vazia da API Gemini.');
+
+      lastRawText = fullText;
+      $streamPreview.classList.add('hidden');
       addLog('Relatório gerado com sucesso!', 'ok');
-      renderReport(text);
+      renderReport(fullText);
 
     } catch (err) {
+      $streamPreview.classList.add('hidden');
       addLog(`Erro Gemini: ${err.message}`, 'error');
       showState('error', `Erro ao processar: ${err.message}`);
     }

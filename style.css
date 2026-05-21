@@ -409,6 +409,24 @@ html, body {
   text-align: center;
 }
 
+.stream-preview {
+  width: 100%;
+  max-width: 600px;
+  margin-top: 8px;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  max-height: 260px;
+  overflow-y: auto;
+  text-align: left;
+}
+
 /* ─── ERROR STATE ─── */
 .report-error {
   flex: 1;
