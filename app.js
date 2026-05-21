@@ -203,24 +203,25 @@ function initPC() {
       const base64 = await blobToBase64(blob);
       const mimeType = blob.type || 'audio/webm';
 
-      const prompt = `Você é um assistente de documentação técnica para uma oficina mecânica de concessionária. Sua tarefa é analisar o áudio com extrema atenção, extrair TODAS as informações faladas e redigir um relatório técnico formal, claro e profissional, organizado nos tópicos abaixo.
+      const prompt = `Você é um assistente de documentação técnica para uma oficina mecânica de concessionária. Sua tarefa é analisar o áudio com muita atenção, extrair TODAS as informações faladas e redigir um relatório de forma direta, correta e limpa, organizado nos tópicos abaixo.
 
-MELHORIA DE ESCRITA E TOM PROFISSIONAL:
-- Reescreva o conteúdo do áudio com uma redação técnica refinada, profissional, coesa e gramaticalmente correta. Evite repetições desnecessárias da fala coloquial e estruture as frases de forma clara e fluida.
-- CRÍTICO: Melhorar a escrita NÃO significa resumir ou omitir dados! Mantenha absolutamente todos os detalhes técnicos, fatos, sintomas, ações descritas e contextos mencionados no áudio. Apenas eleve o nível da redação.
+ESCRITA DIRETA E FIEL AO RELATO:
+- Redija o texto de forma clara, correta e profissional, porém MANTENHA o texto CONCISO e o mais próximo possível das palavras e do estilo prático falado pelo mecânico.
+- Evite termos excessivamente formais, floreios de escritório ou redações longas e artificiais. Mantenha a essência direta da oficina.
+- CRÍTICO: Não resuma a ponto de omitir dados importantes! Mantenha todos os códigos de peças, prazos, sintomas e ações descritas. Apenas escreva de forma limpa, direta e fiel ao áudio.
 
 REGRA CRÍTICA SOBRE NÚMEROS E CÓDIGOS:
-- Transcreva códigos de peças, números de OS, valores, medidas e prazos EXATAMENTE como foram falados. NUNCA invente, aproxime, arredonde ou altere um número. Se ouviu "22003388", escreva exatamente "22003388". Se não tem certeza de um número, escreva o que ouviu e adicione "(verificar)" ao lado.
+- Transcreva códigos de peças, números de OS, valores, medidas e prazos EXATAMENTE como foram falados. NUNCA invente, aproxime ou altere um número. Se ouviu "22003388", escreva exatamente "22003388".
 
 REGRAS DE CONTEÚDO:
-- NÃO omita nenhuma informação relevante. Se o mecânico mencionou algo, mesmo que brevemente, inclua essa informação detalhada no tópico correspondente.
+- NÃO omita informações técnicas relevantes que foram ditas.
 - Não inclua nenhuma introdução ou explicação antes dos tópicos (como "Com base no áudio..."). Comece diretamente com "- RECLAMAÇÃO DO CLIENTE:".
 
 TÓPICOS OBRIGATÓRIOS:
-- RECLAMAÇÃO DO CLIENTE: Detalhe o sintoma ou problema relatado pelo cliente (ruídos, falhas, comportamentos).
-- DIAGNÓSTICO: Descreva a análise técnica do mecânico, causa raiz identificada, componentes afetados (incluindo folgas, avarias, desgastes) e códigos de peças associados a essa falha.
-- SERVIÇO EXECUTADO: Detalhe qualquer ação ou serviço já realizado (inspeções, testes de rodagem, desmontagens, diagnósticos preliminares). Informe também se há ações pendentes/planejadas (como aguardar peças ou dar continuidade). Só escreva "Não informado" se nenhuma atividade tiver sido realizada ou mencionada.
-- PEÇAS: Liste todas as peças de reposição necessárias, solicitadas, em processo de pedido ou utilizadas, acompanhadas de seus códigos exatos.
+- RECLAMAÇÃO DO CLIENTE: OBRIGATORIAMENTE comece este tópico com a frase exata "O cliente alega" e complete com o problema ou sintoma relatado pelo cliente (ex: "O cliente alega ruído na roda do lado direito").
+- DIAGNÓSTICO: Descreva a análise técnica do mecânico, causa identificada, componentes afetados (folgas, avarias, etc.) e códigos das peças associadas.
+- SERVIÇO EXECUTADO: Detalhe o que já foi feito (inspeções, diagnósticos realizados, etc.) e ações planejadas/pendentes (aguardando peça, etc.). Só use "Não informado" se nada foi dito.
+- PEÇAS: Liste as peças necessárias ou solicitadas com seus códigos exatos.
 
 Se algum tópico realmente não foi mencionado no áudio, escreva "Não informado".`;
 
@@ -340,6 +341,16 @@ Se algum tópico realmente não foi mencionado no áudio, escreva "Não informad
       }
     }
 
+    // Force "O CLIENTE ALEGA" format in RECLAMACAO DO CLIENTE
+    if (sections['RECLAMACAO DO CLIENTE']) {
+      let content = sections['RECLAMACAO DO CLIENTE'].trim();
+      const prefixRegex = /^(O\s+)?CLIENTE\s+(ALEG|RELAT|RECLAM|QUEIX|INFORM)[A-Z]*(\s+QUE)?\s*/i;
+      if (prefixRegex.test(content)) {
+        content = content.replace(prefixRegex, '');
+      }
+      sections['RECLAMACAO DO CLIENTE'] = 'O CLIENTE ALEGA ' + content;
+    }
+
     // If parsing failed, show raw text
     if (Object.keys(sections).length === 0) {
       const el = document.createElement('div');
@@ -350,8 +361,11 @@ Se algum tópico realmente não foi mencionado no áudio, escreva "Não informad
       `;
       $sections.appendChild(el);
     } else {
+      let cleanedText = '';
       KEYS.forEach((key, i) => {
         const content = sections[key] || 'NAO INFORMADO';
+        cleanedText += `- ${key}:\n${content}\n`;
+        
         const meta = SECTION_MAP[key];
         const el = document.createElement('div');
         el.className = 'report-section';
@@ -362,6 +376,7 @@ Se algum tópico realmente não foi mencionado no áudio, escreva "Não informad
         `;
         $sections.appendChild(el);
       });
+      lastRawText = cleanedText.trim();
     }
 
     showState('result');
