@@ -198,7 +198,14 @@ function initPC() {
       const base64 = await blobToBase64(blob);
       const mimeType = blob.type || 'audio/webm';
 
-      const prompt = `Você é um mestre mecânico de concessionária. Transcreva o áudio anexo e organize as informações estritamente nos seguintes tópicos: '- RECLAMAÇÃO DO CLIENTE:', '- DIAGNÓSTICO:', '- SERVIÇO EXECUTADO:', '- PEÇAS/INSUMOS:'. Corrija termos gramaticais, mantenha o jargão técnico correto e remova hesitações da fala. Se algum tópico não for mencionado no áudio, escreva "Não informado" como valor.`;
+      const prompt = `Voce e um mestre mecanico de concessionaria. Transcreva o audio anexo e organize as informacoes estritamente nos seguintes topicos: '- RECLAMACAO DO CLIENTE:', '- DIAGNOSTICO:', '- SERVICO EXECUTADO:', '- PECAS/INSUMOS:'.
+
+REGRAS OBRIGATORIAS:
+1. TODO o texto da resposta DEVE ser em LETRAS MAIUSCULAS.
+2. NAO use acentos, cedilhas ou caracteres especiais (exemplo: use "NAO" em vez de "NÃO", "SERVICO" em vez de "SERVIÇO", "RECLAMACAO" em vez de "RECLAMAÇÃO", "PECAS" em vez de "PEÇAS").
+3. NAO inclua nenhuma introducao, explicacao ou comentario. Comece DIRETAMENTE com "- RECLAMACAO DO CLIENTE:" sem nenhum texto antes.
+4. Corrija termos gramaticais, mantenha o jargao tecnico correto e remova hesitacoes da fala.
+5. Se algum topico nao for mencionado no audio, escreva "NAO INFORMADO" como valor.`;
 
       const body = {
         model: 'gemini-3.5-flash',
@@ -252,10 +259,10 @@ function initPC() {
 
   // ── Report Rendering ───────────────────────────────────
   const SECTION_MAP = {
-    'RECLAMAÇÃO DO CLIENTE': { tag: 'tag-reclamacao', label: '🗣 RECLAMAÇÃO DO CLIENTE' },
-    'DIAGNÓSTICO':           { tag: 'tag-diagnostico', label: '🔍 DIAGNÓSTICO' },
-    'SERVIÇO EXECUTADO':     { tag: 'tag-servico',     label: '🔧 SERVIÇO EXECUTADO'    },
-    'PEÇAS/INSUMOS':         { tag: 'tag-pecas',       label: '📦 PEÇAS / INSUMOS'       }
+    'RECLAMACAO DO CLIENTE': { tag: 'tag-reclamacao', label: '🗣 RECLAMAÇÃO DO CLIENTE' },
+    'DIAGNOSTICO':           { tag: 'tag-diagnostico', label: '🔍 DIAGNÓSTICO' },
+    'SERVICO EXECUTADO':     { tag: 'tag-servico',     label: '🔧 SERVIÇO EXECUTADO'    },
+    'PECAS/INSUMOS':         { tag: 'tag-pecas',       label: '📦 PEÇAS / INSUMOS'       }
   };
 
   function renderReport(text) {
