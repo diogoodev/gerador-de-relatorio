@@ -203,21 +203,15 @@ function initPC() {
       const base64 = await blobToBase64(blob);
       const mimeType = blob.type || 'audio/webm';
 
-      const prompt = `Voce e um mestre mecanico experiente de concessionaria. Escute o audio anexo com MUITA ATENCAO e extraia TODAS as informacoes mencionadas, sem omitir nenhum detalhe. Inclua todos os codigos de pecas, numeros, prazos, nomes, medidas e qualquer dado tecnico falado.
+      const prompt = `Você é um mestre mecânico experiente de concessionária. Transcreva o áudio anexo com muita atenção, extraindo TODAS as informações mencionadas sem omitir nenhum detalhe. Inclua todos os códigos de peças, números, prazos, nomes, medidas e qualquer dado técnico falado.
 
-Organize TODAS as informacoes nos topicos abaixo:
+Organize as informações estritamente nos seguintes tópicos:
+- RECLAMAÇÃO DO CLIENTE:
+- DIAGNÓSTICO:
+- SERVIÇO EXECUTADO:
+- PEÇAS/INSUMOS:
 
-- RECLAMACAO DO CLIENTE:
-- DIAGNOSTICO:
-- SERVICO EXECUTADO:
-- PECAS/INSUMOS:
-
-IMPORTANTE - REGRAS DE FORMATACAO:
-- Escreva TUDO em LETRAS MAIUSCULAS.
-- NAO use acentos ou cedilhas (ex: SERVICO, NAO, RECLAMACAO, PECAS, DIAGNOSTICO).
-- NAO escreva nenhuma introducao ou explicacao. Comece direto com "- RECLAMACAO DO CLIENTE:".
-- Remova hesitacoes da fala (tipo "eh", "ah", "ne") mas MANTENHA todo o conteudo tecnico.
-- Se algum topico nao for mencionado, escreva "NAO INFORMADO".`;
+Correija termos gramaticais, mantenha o jargão técnico correto e remova hesitações da fala. Não inclua nenhuma introdução ou explicação antes dos tópicos. Comece diretamente com "- RECLAMAÇÃO DO CLIENTE:". Se algum tópico não for mencionado no áudio, escreva "Não informado" como valor.`;
 
       const body = {
         contents: [
@@ -291,10 +285,12 @@ IMPORTANTE - REGRAS DE FORMATACAO:
 
       if (!fullText) throw new Error('Resposta vazia da API Gemini.');
 
-      lastRawText = fullText;
+      // Normalize for NBS: uppercase + remove accents
+      const normalizedText = normalizeForNBS(fullText);
+      lastRawText = normalizedText;
       $streamPreview.classList.add('hidden');
       addLog('Relatório gerado com sucesso!', 'ok');
-      renderReport(fullText);
+      renderReport(normalizedText);
 
     } catch (err) {
       $streamPreview.classList.add('hidden');
@@ -305,10 +301,10 @@ IMPORTANTE - REGRAS DE FORMATACAO:
 
   // ── Report Rendering ───────────────────────────────────
   const SECTION_MAP = {
-    'RECLAMACAO DO CLIENTE': { tag: 'tag-reclamacao', label: '🗣 RECLAMAÇÃO DO CLIENTE' },
-    'DIAGNOSTICO':           { tag: 'tag-diagnostico', label: '🔍 DIAGNÓSTICO' },
-    'SERVICO EXECUTADO':     { tag: 'tag-servico',     label: '🔧 SERVIÇO EXECUTADO'    },
-    'PECAS/INSUMOS':         { tag: 'tag-pecas',       label: '📦 PEÇAS / INSUMOS'       }
+    'RECLAMACAO DO CLIENTE': { tag: 'tag-reclamacao', label: '🗣 RECLAMACAO DO CLIENTE' },
+    'DIAGNOSTICO':           { tag: 'tag-diagnostico', label: '🔍 DIAGNOSTICO' },
+    'SERVICO EXECUTADO':     { tag: 'tag-servico',     label: '🔧 SERVICO EXECUTADO'    },
+    'PECAS/INSUMOS':         { tag: 'tag-pecas',       label: '📦 PECAS / INSUMOS'       }
   };
 
   function renderReport(text) {
@@ -344,7 +340,7 @@ IMPORTANTE - REGRAS DE FORMATACAO:
       $sections.appendChild(el);
     } else {
       KEYS.forEach((key, i) => {
-        const content = sections[key] || 'Não informado';
+        const content = sections[key] || 'NAO INFORMADO';
         const meta = SECTION_MAP[key];
         const el = document.createElement('div');
         el.className = 'report-section';
@@ -732,4 +728,12 @@ function showToast(msg, type = 'info') {
   $toast.textContent = msg;
   $toast.className = `toast toast-${type} show`;
   setTimeout(() => { $toast.className = 'toast hidden'; }, 3000);
+}
+
+function normalizeForNBS(text) {
+  // Remove accents/diacritics and convert to uppercase
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
 }
