@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GR · Gerador de Relatório</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Barlow+Condensed:wght@300;500;700;900&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     PC INTERFACE — rendered when no ?peer= param
+     ═══════════════════════════════════════════ -->
+<div id="pc-view" class="hidden">
+
+  <!-- Top Bar -->
+  <header class="pc-header">
+    <div class="header-brand">
+      <span class="brand-icon">⚙</span>
+      <div>
+        <div class="brand-title">GR</div>
+        <div class="brand-sub">Gerador de Relatório · IA</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="connection-badge" id="pc-conn-badge">
+        <span class="conn-dot" id="pc-conn-dot"></span>
+        <span id="pc-conn-label">Aguardando celular</span>
+      </div>
+      <button class="gear-btn" id="settings-btn" title="Configurar API Key">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main PC Layout -->
+  <main class="pc-main">
+
+    <!-- Left Panel: QR + Peer ID -->
+    <section class="panel-left">
+      <div class="panel-card qr-card">
+        <div class="card-label">ESCANEIE COM O CELULAR</div>
+        <div id="qr-container">
+          <div class="qr-skeleton" id="qr-skeleton">
+            <div class="qr-spinner"></div>
+            <span>Gerando ID da baia...</span>
+          </div>
+          <div id="qr-code" class="hidden"></div>
+        </div>
+        <div class="peer-id-box">
+          <span class="peer-id-label">ID DA BAIA:</span>
+          <span id="pc-peer-id" class="peer-id-value">—</span>
+        </div>
+      </div>
+
+      <!-- Audio Player (shows after receiving audio) -->
+      <div class="panel-card audio-card hidden" id="audio-card">
+        <div class="card-label">ÁUDIO RECEBIDO</div>
+        <audio id="audio-player" controls class="audio-player"></audio>
+        <div class="audio-meta" id="audio-meta"></div>
+      </div>
+
+      <!-- Status Log -->
+      <div class="panel-card log-card">
+        <div class="card-label">LOG DO SISTEMA</div>
+        <div id="pc-log" class="log-output">
+          <div class="log-entry log-info">Sistema iniciando...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Report Output -->
+    <section class="panel-right">
+      <div class="panel-card report-card">
+        <div class="report-card-header">
+          <div class="card-label">RELATÓRIO TÉCNICO</div>
+          <div class="report-status" id="report-status">
+            <span class="status-idle">Aguardando áudio do mecânico</span>
+          </div>
+        </div>
+
+        <!-- Idle State -->
+        <div id="report-idle" class="report-idle">
+          <div class="idle-graphic">
+            <div class="idle-rings">
+              <div class="ring ring1"></div>
+              <div class="ring ring2"></div>
+              <div class="ring ring3"></div>
+            </div>
+            <div class="idle-icon">🔧</div>
+          </div>
+          <p class="idle-text">O relatório gerado pela IA aparecerá aqui após o mecânico enviar o áudio pelo celular.</p>
+        </div>
+
+        <!-- Processing State -->
+        <div id="report-processing" class="report-processing hidden">
+          <div class="processing-animation">
+            <div class="proc-bar"><div class="proc-fill"></div></div>
+            <div class="proc-bar"><div class="proc-fill" style="animation-delay:.2s"></div></div>
+            <div class="proc-bar"><div class="proc-fill" style="animation-delay:.4s"></div></div>
+          </div>
+          <p class="processing-text">Transcrevendo e estruturando o relatório com IA...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="report-error" class="report-error hidden">
+          <div class="error-icon">⚠</div>
+          <p id="error-message" class="error-msg"></p>
+          <button id="retry-btn" class="btn-retry">Tentar Novamente</button>
+        </div>
+
+        <!-- Result -->
+        <div id="report-result" class="report-result hidden">
+          <div class="report-sections" id="report-sections"></div>
+          <div class="report-actions">
+            <button id="copy-btn" class="btn-copy">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              Copiar para OS
+            </button>
+            <button id="clear-btn" class="btn-clear">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              Limpar
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MOBILE INTERFACE — rendered when ?peer= exists
+     ═══════════════════════════════════════════ -->
+<div id="mobile-view" class="hidden">
+  <div class="mobile-shell">
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+      <div class="mobile-brand">
+        <span class="mobile-brand-icon">⚙</span>
+        <div>
+          <div class="mobile-brand-title">GR</div>
+          <div class="mobile-brand-sub">Gerador de Relatório</div>
+        </div>
+      </div>
+      <div class="mobile-conn-badge" id="mob-conn-badge">
+        <span class="conn-dot" id="mob-conn-dot"></span>
+        <span id="mob-conn-label">Conectando...</span>
+      </div>
+    </header>
+
+    <!-- Peer target info -->
+    <div class="mobile-target-bar">
+      <span class="target-label">BAIA:</span>
+      <span id="mob-target-id" class="target-value">—</span>
+    </div>
+
+    <!-- Record Area -->
+    <div class="mobile-record-area">
+      <!-- Waveform visualizer -->
+      <div class="waveform-container" id="waveform-container">
+        <canvas id="waveform-canvas" width="300" height="80"></canvas>
+      </div>
+
+      <!-- Timer -->
+      <div class="record-timer" id="record-timer">00:00</div>
+
+      <!-- Big Record Button -->
+      <button id="record-btn" class="record-btn" disabled>
+        <div class="record-btn-inner">
+          <div class="record-icon" id="record-icon">
+            <div class="mic-body"></div>
+            <div class="mic-stand"></div>
+          </div>
+          <div class="stop-icon hidden" id="stop-icon">■</div>
+        </div>
+        <div class="record-pulse" id="record-pulse"></div>
+      </button>
+      <div class="record-hint" id="record-hint">Aguardando conexão com a baia...</div>
+    </div>
+
+    <!-- Status bar at bottom -->
+    <div class="mobile-status-bar">
+      <div class="mobile-status-row">
+        <span id="mob-status-text" class="mob-status-idle">Pronto para gravar</span>
+      </div>
+      <div class="mobile-audio-preview hidden" id="mob-audio-preview">
+        <audio id="mob-playback" controls class="mob-audio-ctrl"></audio>
+        <button id="mob-send-btn" class="mob-send-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Enviar para o PC
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SETTINGS MODAL
+     ═══════════════════════════════════════════ -->
+<div id="settings-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">CONFIGURAR API</span>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-desc">Insira sua chave da API do Google Gemini. Ela será salva apenas no armazenamento local deste navegador.</p>
+      <div class="input-group">
+        <label class="input-label">GEMINI API KEY</label>
+        <div class="input-wrap">
+          <input type="password" id="api-key-input" class="api-input" placeholder="AIza..." />
+          <button class="toggle-vis" id="toggle-vis">👁</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="save-key-btn" class="btn-save-key">Salvar Chave</button>
+      </div>
+      <div id="key-saved-msg" class="key-saved hidden">✓ Chave salva com sucesso!</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TOAST
+     ═══════════════════════════════════════════ -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
