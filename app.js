@@ -203,22 +203,24 @@ function initPC() {
       const base64 = await blobToBase64(blob);
       const mimeType = blob.type || 'audio/webm';
 
-      const prompt = `Você é um assistente de transcrição técnica para uma oficina mecânica de concessionária. Sua tarefa é ouvir o áudio com extrema atenção e transcrever fielmente TODAS as informações faladas, organizando-as nos tópicos abaixo.
+      const prompt = `Você é um assistente de documentação técnica para uma oficina mecânica de concessionária. Sua tarefa é analisar o áudio com extrema atenção, extrair TODAS as informações faladas e redigir um relatório técnico formal, claro e profissional, organizado nos tópicos abaixo.
+
+MELHORIA DE ESCRITA E TOM PROFISSIONAL:
+- Reescreva o conteúdo do áudio com uma redação técnica refinada, profissional, coesa e gramaticalmente correta. Evite repetições desnecessárias da fala coloquial e estruture as frases de forma clara e fluida.
+- CRÍTICO: Melhorar a escrita NÃO significa resumir ou omitir dados! Mantenha absolutamente todos os detalhes técnicos, fatos, sintomas, ações descritas e contextos mencionados no áudio. Apenas eleve o nível da redação.
 
 REGRA CRÍTICA SOBRE NÚMEROS E CÓDIGOS:
-- Transcreva códigos de peças, números de OS, valores, medidas e prazos EXATAMENTE como foram falados. NUNCA invente, arredonde ou altere um número. Se ouviu "22003388", escreva exatamente "22003388". Se não tem certeza de um número, escreva o que ouviu e adicione "(verificar)" ao lado.
+- Transcreva códigos de peças, números de OS, valores, medidas e prazos EXATAMENTE como foram falados. NUNCA invente, aproxime, arredonde ou altere um número. Se ouviu "22003388", escreva exatamente "22003388". Se não tem certeza de um número, escreva o que ouviu e adicione "(verificar)" ao lado.
 
 REGRAS DE CONTEÚDO:
-- NÃO resuma. Mantenha todos os detalhes técnicos mencionados.
-- Se o mecânico mencionou algo, mesmo que brevemente, inclua essa informação no tópico correspondente.
-- Corrija apenas hesitações da fala ("éh", "ah", "né") e erros gramaticais. Mantenha o jargão técnico.
-- Não inclua introdução ou explicação antes dos tópicos. Comece diretamente com "- RECLAMAÇÃO DO CLIENTE:".
+- NÃO omita nenhuma informação relevante. Se o mecânico mencionou algo, mesmo que brevemente, inclua essa informação detalhada no tópico correspondente.
+- Não inclua nenhuma introdução ou explicação antes dos tópicos (como "Com base no áudio..."). Comece diretamente com "- RECLAMAÇÃO DO CLIENTE:".
 
 TÓPICOS OBRIGATÓRIOS:
-- RECLAMAÇÃO DO CLIENTE: O que o cliente relatou como problema. Sintomas, barulhos, comportamentos do veículo.
-- DIAGNÓSTICO: O que o mecânico identificou como causa. Inclua peças afetadas, tipo de defeito (folga, avaria, desgaste, etc.) e códigos de peças mencionados no diagnóstico.
-- SERVIÇO EXECUTADO: O que já foi feito até agora, mesmo que parcialmente. Inclua inspeções realizadas, desmontagens, serviços parciais. Se mencionou que vai dar continuidade depois, registre o que já foi feito e o que falta. Somente escreva "Não informado" se realmente NADA foi dito sobre serviços.
-- PEÇAS/INSUMOS: Liste TODAS as peças mencionadas com seus códigos exatos. Indique se foram usadas, solicitadas ou se estão aguardando chegada. Inclua quantidades se mencionadas.
+- RECLAMAÇÃO DO CLIENTE: Detalhe o sintoma ou problema relatado pelo cliente (ruídos, falhas, comportamentos).
+- DIAGNÓSTICO: Descreva a análise técnica do mecânico, causa raiz identificada, componentes afetados (incluindo folgas, avarias, desgastes) e códigos de peças associados a essa falha.
+- SERVIÇO EXECUTADO: Detalhe qualquer ação ou serviço já realizado (inspeções, testes de rodagem, desmontagens, diagnósticos preliminares). Informe também se há ações pendentes/planejadas (como aguardar peças ou dar continuidade). Só escreva "Não informado" se nenhuma atividade tiver sido realizada ou mencionada.
+- PEÇAS/INSUMOS: Liste todas as peças de reposição e insumos necessários, solicitados, em processo de pedido ou utilizados, acompanhados de seus códigos exatos.
 
 Se algum tópico realmente não foi mencionado no áudio, escreva "Não informado".`;
 
