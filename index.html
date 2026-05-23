@@ -6,123 +6,64 @@
   <meta name="theme-color" content="#F8F9FA" />
   <meta name="color-scheme" content="light" />
   <title>GR · Gerador de Relatório</title>
-  <meta name="description" content="Gerador de relatórios técnicos por voz para oficinas mecânicas. Grave no celular e resgate no PC com PIN seguro." />
+  <meta name="description" content="Gerador de relatórios técnicos por voz para oficinas mecânicas." />
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════
-     TELA HOME — seleção de modo
-     ═══════════════════════════════════════════════════════════ -->
+<!-- HOME -->
 <div id="view-home" class="view">
-
   <header class="app-header">
     <div class="header-brand">
       <span class="brand-icon">⚙</span>
-      <div>
-        <div class="brand-title">GR</div>
-        <div class="brand-sub">Gerador de Relatório · IA</div>
-      </div>
+      <span class="brand-title">GR</span>
     </div>
-    <button class="gear-btn" id="settings-btn-home" title="Configurar API Key" aria-label="Configurações">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <button class="icon-btn" id="settings-btn-home" aria-label="Configurações">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     </button>
   </header>
 
   <main class="home-main">
-    <div class="home-hero">
-      <div class="hero-badge">MISSÃO IMPOSSÍVEL MODE 🔥</div>
-      <h1 class="hero-title">Relatório técnico<br>em segundos</h1>
-      <p class="hero-desc">Grave no celular → receba um PIN → resgate no PC.<br>O relatório se autodestrói após a leitura.</p>
-    </div>
+    <h1 class="home-title">Gerador de<br>Relatório</h1>
 
-    <div class="home-cards">
-
-      <!-- GRAVAR -->
-      <button id="btn-go-record" class="mode-card mode-card--record" aria-label="Gravar relatório no celular">
-        <div class="mode-card-icon">🎙️</div>
-        <div class="mode-card-content">
-          <div class="mode-card-title">Gravar Relatório</div>
-          <div class="mode-card-desc">Use o celular para gravar a voz do mecânico. A IA transcreve e formata automaticamente.</div>
-        </div>
-        <div class="mode-card-arrow">→</div>
+    <div class="home-actions">
+      <button id="btn-go-record" class="action-card action-card--record" aria-label="Gravar relatório">
+        <span class="action-card-icon">🎙️</span>
+        <span class="action-card-label">Gravar</span>
       </button>
 
-      <!-- RESGATAR -->
-      <button id="btn-go-retrieve" class="mode-card mode-card--retrieve" aria-label="Resgatar relatório com PIN">
-        <div class="mode-card-icon">📋</div>
-        <div class="mode-card-content">
-          <div class="mode-card-title">Resgatar Relatório</div>
-          <div class="mode-card-desc">Digite o PIN de 4 dígitos gerado no celular para buscar o relatório no PC.</div>
-        </div>
-        <div class="mode-card-arrow">→</div>
+      <button id="btn-go-retrieve" class="action-card action-card--retrieve" aria-label="Resgatar relatório">
+        <span class="action-card-icon">📋</span>
+        <span class="action-card-label">Resgatar</span>
       </button>
-
-    </div>
-
-    <div class="home-flow">
-      <div class="flow-step">
-        <div class="flow-num">1</div>
-        <div class="flow-text">Mecânico grava no celular</div>
-      </div>
-      <div class="flow-divider">·····</div>
-      <div class="flow-step">
-        <div class="flow-num">2</div>
-        <div class="flow-text">IA gera o relatório</div>
-      </div>
-      <div class="flow-divider">·····</div>
-      <div class="flow-step">
-        <div class="flow-num">3</div>
-        <div class="flow-text">PIN aparece na tela</div>
-      </div>
-      <div class="flow-divider">·····</div>
-      <div class="flow-step">
-        <div class="flow-num">4</div>
-        <div class="flow-text">Técnico digita PIN no PC</div>
-      </div>
-      <div class="flow-divider">·····</div>
-      <div class="flow-step">
-        <div class="flow-num">5</div>
-        <div class="flow-text">Dado apagado do servidor</div>
-      </div>
     </div>
   </main>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     TELA GRAVAÇÃO — celular
-     ═══════════════════════════════════════════════════════════ -->
+<!-- GRAVAÇÃO -->
 <div id="view-record" class="view hidden">
-
   <header class="app-header">
     <button class="back-btn" id="back-from-record" aria-label="Voltar">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      Voltar
     </button>
-    <div class="header-brand header-brand--small">
-      <span class="brand-icon">⚙</span>
-      <div class="brand-title brand-title--sm">GR</div>
-    </div>
-    <button class="gear-btn" id="settings-btn-record" title="Configurar API Key" aria-label="Configurações">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <span class="header-label">Gravação</span>
+    <button class="icon-btn" id="settings-btn-record" aria-label="Configurações">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     </button>
   </header>
 
   <main class="record-main">
 
-    <!-- Seção de gravação -->
+    <!-- Gravando -->
     <div id="record-section">
-      <!-- Waveform -->
       <div class="waveform-wrap">
-        <canvas id="waveform-canvas" width="340" height="80" aria-hidden="true"></canvas>
+        <canvas id="waveform-canvas" width="340" height="72" aria-hidden="true"></canvas>
       </div>
 
-      <!-- Timer -->
       <div class="record-timer" id="record-timer">00:00</div>
 
-      <!-- Botão de gravar -->
       <div class="record-btn-wrap">
         <button id="record-btn" class="record-btn" aria-label="Gravar áudio">
           <div class="record-btn-ring"></div>
@@ -134,17 +75,16 @@
         <div class="record-label" id="record-label">Toque para gravar</div>
       </div>
 
-      <!-- Preview do áudio -->
       <div id="audio-preview-wrap" class="audio-preview-wrap hidden">
         <audio id="audio-playback" controls class="audio-ctrl"></audio>
-        <button id="btn-process" class="btn-action btn-action--primary" aria-label="Processar com IA e gerar PIN">
+        <button id="btn-process" class="btn-action btn-action--primary" aria-label="Processar com IA">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          Processar com IA → Gerar PIN
+          Processar com IA
         </button>
       </div>
     </div>
 
-    <!-- Seção de processamento (loading) -->
+    <!-- Processando -->
     <div id="processing-section" class="hidden">
       <div class="proc-animation">
         <div class="proc-spinner"></div>
@@ -154,68 +94,49 @@
           <div class="proc-bar"><div class="proc-fill" style="animation-delay:.4s"></div></div>
         </div>
       </div>
-      <div class="proc-label" id="proc-label">Transcrevendo áudio com IA...</div>
+      <div class="proc-label" id="proc-label">Processando...</div>
       <div id="stream-preview" class="stream-preview hidden"></div>
     </div>
 
-    <!-- Seção de sucesso — exibe PIN -->
+    <!-- PIN gerado -->
     <div id="pin-section" class="hidden">
-      <div class="pin-success-icon">✅</div>
-      <div class="pin-title">Relatório pronto!</div>
-      <div class="pin-subtitle">Diga este PIN para o técnico no PC:</div>
-
+      <div class="pin-label">PIN</div>
       <div class="pin-display" id="pin-display" aria-live="polite">
         <span class="pin-digit" id="pin-d0">—</span>
         <span class="pin-digit" id="pin-d1">—</span>
         <span class="pin-digit" id="pin-d2">—</span>
         <span class="pin-digit" id="pin-d3">—</span>
       </div>
-
-      <div class="pin-expiry" id="pin-expiry">⏱ Expira em <span id="pin-countdown">10:00</span></div>
-      <div class="pin-warning">⚠ O relatório some após ser lido ou em 10 minutos</div>
-
+      <div class="pin-expiry">⏱ <span id="pin-countdown">10:00</span></div>
       <button id="btn-new-record" class="btn-action btn-action--secondary">
-        🎙️ Gravar novo relatório
+        Nova gravação
       </button>
     </div>
 
-    <!-- Seção de erro -->
+    <!-- Erro -->
     <div id="record-error-section" class="hidden">
       <div class="error-icon-big">⚠️</div>
       <div class="error-title" id="record-error-msg">Erro ao processar</div>
-      <button id="btn-retry-record" class="btn-action btn-action--danger">
-        Tentar novamente
-      </button>
+      <button id="btn-retry-record" class="btn-action btn-action--danger">Tentar novamente</button>
     </div>
 
   </main>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     TELA RESGATE — PC
-     ═══════════════════════════════════════════════════════════ -->
+<!-- RESGATE -->
 <div id="view-retrieve" class="view hidden">
-
   <header class="app-header">
     <button class="back-btn" id="back-from-retrieve" aria-label="Voltar">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      Voltar
     </button>
-    <div class="header-brand header-brand--small">
-      <span class="brand-icon">⚙</span>
-      <div class="brand-title brand-title--sm">GR</div>
-    </div>
-    <div style="width:40px"></div><!-- espaçador -->
+    <span class="header-label">Resgatar</span>
+    <div style="width:40px"></div>
   </header>
 
   <main class="retrieve-main">
 
-    <!-- Painel de busca por PIN -->
-    <div id="retrieve-input-section" class="retrieve-panel">
-      <div class="retrieve-icon">📋</div>
+    <div id="retrieve-input-section">
       <h2 class="retrieve-title">Digite o PIN</h2>
-      <p class="retrieve-desc">O mecânico gerou um PIN de 4 dígitos no celular. Digite-o abaixo para buscar o relatório.</p>
-
       <div class="pin-input-group">
         <input
           type="tel"
@@ -228,60 +149,42 @@
           autocomplete="off"
           aria-label="PIN de 4 dígitos"
         />
-        <button id="btn-fetch" class="btn-action btn-action--primary btn-fetch" aria-label="Buscar relatório">
+        <button id="btn-fetch" class="btn-action btn-action--primary btn-fetch" aria-label="Buscar">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           Buscar
         </button>
       </div>
-
       <div id="retrieve-error" class="retrieve-error hidden" role="alert"></div>
     </div>
 
-    <!-- Spinner de busca -->
     <div id="retrieve-loading" class="hidden retrieve-loading">
       <div class="proc-spinner"></div>
-      <div class="proc-label">Buscando relatório...</div>
     </div>
 
-    <!-- Resultado do relatório -->
     <div id="retrieve-result-section" class="hidden">
-      <div class="result-header">
-        <div class="result-badge">✓ RELATÓRIO RESGATADO</div>
-        <div class="result-notice">🔥 Este relatório foi <strong>apagado do servidor</strong> no momento da leitura</div>
-      </div>
-
       <div class="report-card">
         <div class="report-sections" id="report-sections"></div>
       </div>
-
       <div class="result-actions">
         <button id="copy-btn" class="btn-action btn-action--primary">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
           Copiar para OS
         </button>
-        <button id="btn-new-search" class="btn-action btn-action--secondary">
-          🔍 Buscar outro relatório
-        </button>
+        <button id="btn-new-search" class="btn-action btn-action--secondary">Novo PIN</button>
       </div>
     </div>
 
   </main>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     SETTINGS MODAL
-     ═══════════════════════════════════════════════════════════ -->
+<!-- SETTINGS MODAL -->
 <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
   <div class="modal-box">
     <div class="modal-header">
-      <span class="modal-title" id="modal-title-text">CONFIGURAR API</span>
+      <span class="modal-title" id="modal-title-text">API KEY</span>
       <button class="modal-close" id="modal-close" aria-label="Fechar">✕</button>
     </div>
     <div class="modal-body">
-      <p class="modal-desc">
-        Insira sua chave da API do Google Gemini.<br>
-        Ela será salva <strong>apenas no armazenamento local</strong> deste aparelho.
-      </p>
       <div class="input-group">
         <label class="input-label" for="api-key-input">GEMINI API KEY</label>
         <div class="input-wrap">
@@ -290,16 +193,14 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button id="save-key-btn" class="btn-action btn-action--primary">Salvar Chave</button>
+        <button id="save-key-btn" class="btn-action btn-action--primary">Salvar</button>
       </div>
-      <div id="key-saved-msg" class="key-saved hidden">✓ Chave salva com sucesso!</div>
+      <div id="key-saved-msg" class="key-saved hidden">✓ Salvo!</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     TOAST
-     ═══════════════════════════════════════════════════════════ -->
+<!-- TOAST -->
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
 <script src="app.js"></script>
