@@ -3,23 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#F8F9FA" />
+  <meta name="color-scheme" content="light" />
   <title>GR · Gerador de Relatório</title>
+  <meta name="description" content="Gerador de relatórios técnicos por voz para oficinas mecânicas. Grave no celular e resgate no PC com PIN seguro." />
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Barlow+Condensed:wght@300;500;700;900&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════
-     PC INTERFACE — rendered when no ?peer= param
-     ═══════════════════════════════════════════ -->
-<div id="pc-view" class="hidden">
+<!-- ═══════════════════════════════════════════════════════════
+     TELA HOME — seleção de modo
+     ═══════════════════════════════════════════════════════════ -->
+<div id="view-home" class="view">
 
-  <!-- Top Bar -->
-  <header class="pc-header">
+  <header class="app-header">
     <div class="header-brand">
       <span class="brand-icon">⚙</span>
       <div>
@@ -27,211 +26,281 @@
         <div class="brand-sub">Gerador de Relatório · IA</div>
       </div>
     </div>
-    <div class="header-right">
-      <div class="connection-badge" id="pc-conn-badge">
-        <span class="conn-dot" id="pc-conn-dot"></span>
-        <span id="pc-conn-label">Aguardando celular</span>
-      </div>
-      <button class="gear-btn" id="settings-btn" title="Configurar API Key">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      </button>
-    </div>
+    <button class="gear-btn" id="settings-btn-home" title="Configurar API Key" aria-label="Configurações">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
   </header>
 
-  <!-- Main PC Layout -->
-  <main class="pc-main">
+  <main class="home-main">
+    <div class="home-hero">
+      <div class="hero-badge">MISSÃO IMPOSSÍVEL MODE 🔥</div>
+      <h1 class="hero-title">Relatório técnico<br>em segundos</h1>
+      <p class="hero-desc">Grave no celular → receba um PIN → resgate no PC.<br>O relatório se autodestrói após a leitura.</p>
+    </div>
 
-    <!-- Left Panel: QR + Peer ID -->
-    <section class="panel-left">
-      <div class="panel-card qr-card">
-        <div class="card-label">ESCANEIE COM O CELULAR</div>
-        <div id="qr-container">
-          <div class="qr-skeleton" id="qr-skeleton">
-            <div class="qr-spinner"></div>
-            <span>Gerando ID da baia...</span>
-          </div>
-          <div id="qr-code" class="hidden"></div>
+    <div class="home-cards">
+
+      <!-- GRAVAR -->
+      <button id="btn-go-record" class="mode-card mode-card--record" aria-label="Gravar relatório no celular">
+        <div class="mode-card-icon">🎙️</div>
+        <div class="mode-card-content">
+          <div class="mode-card-title">Gravar Relatório</div>
+          <div class="mode-card-desc">Use o celular para gravar a voz do mecânico. A IA transcreve e formata automaticamente.</div>
         </div>
-        <div class="peer-id-box">
-          <span class="peer-id-label">ID DA BAIA:</span>
-          <span id="pc-peer-id" class="peer-id-value">—</span>
+        <div class="mode-card-arrow">→</div>
+      </button>
+
+      <!-- RESGATAR -->
+      <button id="btn-go-retrieve" class="mode-card mode-card--retrieve" aria-label="Resgatar relatório com PIN">
+        <div class="mode-card-icon">📋</div>
+        <div class="mode-card-content">
+          <div class="mode-card-title">Resgatar Relatório</div>
+          <div class="mode-card-desc">Digite o PIN de 4 dígitos gerado no celular para buscar o relatório no PC.</div>
         </div>
+        <div class="mode-card-arrow">→</div>
+      </button>
+
+    </div>
+
+    <div class="home-flow">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div class="flow-text">Mecânico grava no celular</div>
       </div>
-
-      <!-- Audio Player (shows after receiving audio) -->
-      <div class="panel-card audio-card hidden" id="audio-card">
-        <div class="card-label">ÁUDIO RECEBIDO</div>
-        <audio id="audio-player" controls class="audio-player"></audio>
-        <div class="audio-meta" id="audio-meta"></div>
+      <div class="flow-divider">·····</div>
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div class="flow-text">IA gera o relatório</div>
       </div>
-
-      <!-- Status Log -->
-      <div class="panel-card log-card">
-        <div class="card-label">LOG DO SISTEMA</div>
-        <div id="pc-log" class="log-output">
-          <div class="log-entry log-info">Sistema iniciando...</div>
-        </div>
+      <div class="flow-divider">·····</div>
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div class="flow-text">PIN aparece na tela</div>
       </div>
-    </section>
-
-    <!-- Right Panel: Report Output -->
-    <section class="panel-right">
-      <div class="panel-card report-card">
-        <div class="report-card-header">
-          <div class="card-label">RELATÓRIO TÉCNICO</div>
-          <div class="report-status" id="report-status">
-            <span class="status-idle">Aguardando áudio do mecânico</span>
-          </div>
-        </div>
-
-        <!-- Idle State -->
-        <div id="report-idle" class="report-idle">
-          <div class="idle-graphic">
-            <div class="idle-rings">
-              <div class="ring ring1"></div>
-              <div class="ring ring2"></div>
-              <div class="ring ring3"></div>
-            </div>
-            <div class="idle-icon">🔧</div>
-          </div>
-          <p class="idle-text">O relatório gerado pela IA aparecerá aqui após o mecânico enviar o áudio pelo celular.</p>
-        </div>
-
-        <!-- Processing State -->
-        <div id="report-processing" class="report-processing hidden">
-          <div class="processing-animation">
-            <div class="proc-bar"><div class="proc-fill"></div></div>
-            <div class="proc-bar"><div class="proc-fill" style="animation-delay:.2s"></div></div>
-            <div class="proc-bar"><div class="proc-fill" style="animation-delay:.4s"></div></div>
-          </div>
-          <p class="processing-text">Transcrevendo e estruturando o relatório com IA...</p>
-          <div id="stream-preview" class="stream-preview hidden"></div>
-        </div>
-
-        <!-- Error State -->
-        <div id="report-error" class="report-error hidden">
-          <div class="error-icon">⚠</div>
-          <p id="error-message" class="error-msg"></p>
-          <button id="retry-btn" class="btn-retry">Tentar Novamente</button>
-        </div>
-
-        <!-- Result -->
-        <div id="report-result" class="report-result hidden">
-          <div class="report-sections" id="report-sections"></div>
-          <div class="report-actions">
-            <button id="copy-btn" class="btn-copy">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-              Copiar para OS
-            </button>
-            <button id="clear-btn" class="btn-clear">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-              Limpar
-            </button>
-          </div>
-        </div>
+      <div class="flow-divider">·····</div>
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div class="flow-text">Técnico digita PIN no PC</div>
       </div>
-    </section>
+      <div class="flow-divider">·····</div>
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <div class="flow-text">Dado apagado do servidor</div>
+      </div>
+    </div>
   </main>
 </div>
 
-<!-- ═══════════════════════════════════════════
-     MOBILE INTERFACE — rendered when ?peer= exists
-     ═══════════════════════════════════════════ -->
-<div id="mobile-view" class="hidden">
-  <div class="mobile-shell">
+<!-- ═══════════════════════════════════════════════════════════
+     TELA GRAVAÇÃO — celular
+     ═══════════════════════════════════════════════════════════ -->
+<div id="view-record" class="view hidden">
 
-    <!-- Mobile Header -->
-    <header class="mobile-header">
-      <div class="mobile-brand">
-        <span class="mobile-brand-icon">⚙</span>
-        <div>
-          <div class="mobile-brand-title">GR</div>
-          <div class="mobile-brand-sub">Gerador de Relatório</div>
-        </div>
-      </div>
-      <div class="mobile-conn-badge" id="mob-conn-badge">
-        <span class="conn-dot" id="mob-conn-dot"></span>
-        <span id="mob-conn-label">Conectando...</span>
-      </div>
-    </header>
-
-    <!-- Peer target info -->
-    <div class="mobile-target-bar">
-      <span class="target-label">BAIA:</span>
-      <span id="mob-target-id" class="target-value">—</span>
+  <header class="app-header">
+    <button class="back-btn" id="back-from-record" aria-label="Voltar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Voltar
+    </button>
+    <div class="header-brand header-brand--small">
+      <span class="brand-icon">⚙</span>
+      <div class="brand-title brand-title--sm">GR</div>
     </div>
+    <button class="gear-btn" id="settings-btn-record" title="Configurar API Key" aria-label="Configurações">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+  </header>
 
-    <!-- Record Area -->
-    <div class="mobile-record-area">
-      <!-- Waveform visualizer -->
-      <div class="waveform-container" id="waveform-container">
-        <canvas id="waveform-canvas" width="300" height="80"></canvas>
+  <main class="record-main">
+
+    <!-- Seção de gravação -->
+    <div id="record-section">
+      <!-- Waveform -->
+      <div class="waveform-wrap">
+        <canvas id="waveform-canvas" width="340" height="80" aria-hidden="true"></canvas>
       </div>
 
       <!-- Timer -->
       <div class="record-timer" id="record-timer">00:00</div>
 
-      <!-- Big Record Button -->
-      <button id="record-btn" class="record-btn" disabled>
-        <div class="record-btn-inner">
-          <div class="record-icon" id="record-icon">
-            <div class="mic-body"></div>
-            <div class="mic-stand"></div>
+      <!-- Botão de gravar -->
+      <div class="record-btn-wrap">
+        <button id="record-btn" class="record-btn" aria-label="Gravar áudio">
+          <div class="record-btn-ring"></div>
+          <div class="record-btn-core">
+            <span id="record-icon-mic">🎙️</span>
+            <span id="record-icon-stop" class="hidden">■</span>
           </div>
-          <div class="stop-icon hidden" id="stop-icon">■</div>
-        </div>
-        <div class="record-pulse" id="record-pulse"></div>
-      </button>
-      <div class="record-hint" id="record-hint">Aguardando conexão com a baia...</div>
-    </div>
-
-    <!-- Status bar at bottom -->
-    <div class="mobile-status-bar">
-      <div class="mobile-status-row">
-        <span id="mob-status-text" class="mob-status-idle">Pronto para gravar</span>
+        </button>
+        <div class="record-label" id="record-label">Toque para gravar</div>
       </div>
-      <div class="mobile-audio-preview hidden" id="mob-audio-preview">
-        <audio id="mob-playback" controls class="mob-audio-ctrl"></audio>
-        <button id="mob-send-btn" class="mob-send-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          Enviar para o PC
+
+      <!-- Preview do áudio -->
+      <div id="audio-preview-wrap" class="audio-preview-wrap hidden">
+        <audio id="audio-playback" controls class="audio-ctrl"></audio>
+        <button id="btn-process" class="btn-action btn-action--primary" aria-label="Processar com IA e gerar PIN">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Processar com IA → Gerar PIN
         </button>
       </div>
     </div>
 
-  </div>
+    <!-- Seção de processamento (loading) -->
+    <div id="processing-section" class="hidden">
+      <div class="proc-animation">
+        <div class="proc-spinner"></div>
+        <div class="proc-bars">
+          <div class="proc-bar"><div class="proc-fill"></div></div>
+          <div class="proc-bar"><div class="proc-fill" style="animation-delay:.2s"></div></div>
+          <div class="proc-bar"><div class="proc-fill" style="animation-delay:.4s"></div></div>
+        </div>
+      </div>
+      <div class="proc-label" id="proc-label">Transcrevendo áudio com IA...</div>
+      <div id="stream-preview" class="stream-preview hidden"></div>
+    </div>
+
+    <!-- Seção de sucesso — exibe PIN -->
+    <div id="pin-section" class="hidden">
+      <div class="pin-success-icon">✅</div>
+      <div class="pin-title">Relatório pronto!</div>
+      <div class="pin-subtitle">Diga este PIN para o técnico no PC:</div>
+
+      <div class="pin-display" id="pin-display" aria-live="polite">
+        <span class="pin-digit" id="pin-d0">—</span>
+        <span class="pin-digit" id="pin-d1">—</span>
+        <span class="pin-digit" id="pin-d2">—</span>
+        <span class="pin-digit" id="pin-d3">—</span>
+      </div>
+
+      <div class="pin-expiry" id="pin-expiry">⏱ Expira em <span id="pin-countdown">10:00</span></div>
+      <div class="pin-warning">⚠ O relatório some após ser lido ou em 10 minutos</div>
+
+      <button id="btn-new-record" class="btn-action btn-action--secondary">
+        🎙️ Gravar novo relatório
+      </button>
+    </div>
+
+    <!-- Seção de erro -->
+    <div id="record-error-section" class="hidden">
+      <div class="error-icon-big">⚠️</div>
+      <div class="error-title" id="record-error-msg">Erro ao processar</div>
+      <button id="btn-retry-record" class="btn-action btn-action--danger">
+        Tentar novamente
+      </button>
+    </div>
+
+  </main>
 </div>
 
-<!-- ═══════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════
+     TELA RESGATE — PC
+     ═══════════════════════════════════════════════════════════ -->
+<div id="view-retrieve" class="view hidden">
+
+  <header class="app-header">
+    <button class="back-btn" id="back-from-retrieve" aria-label="Voltar">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Voltar
+    </button>
+    <div class="header-brand header-brand--small">
+      <span class="brand-icon">⚙</span>
+      <div class="brand-title brand-title--sm">GR</div>
+    </div>
+    <div style="width:40px"></div><!-- espaçador -->
+  </header>
+
+  <main class="retrieve-main">
+
+    <!-- Painel de busca por PIN -->
+    <div id="retrieve-input-section" class="retrieve-panel">
+      <div class="retrieve-icon">📋</div>
+      <h2 class="retrieve-title">Digite o PIN</h2>
+      <p class="retrieve-desc">O mecânico gerou um PIN de 4 dígitos no celular. Digite-o abaixo para buscar o relatório.</p>
+
+      <div class="pin-input-group">
+        <input
+          type="tel"
+          id="pin-input"
+          class="pin-input"
+          maxlength="4"
+          pattern="[0-9]{4}"
+          inputmode="numeric"
+          placeholder="0000"
+          autocomplete="off"
+          aria-label="PIN de 4 dígitos"
+        />
+        <button id="btn-fetch" class="btn-action btn-action--primary btn-fetch" aria-label="Buscar relatório">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Buscar
+        </button>
+      </div>
+
+      <div id="retrieve-error" class="retrieve-error hidden" role="alert"></div>
+    </div>
+
+    <!-- Spinner de busca -->
+    <div id="retrieve-loading" class="hidden retrieve-loading">
+      <div class="proc-spinner"></div>
+      <div class="proc-label">Buscando relatório...</div>
+    </div>
+
+    <!-- Resultado do relatório -->
+    <div id="retrieve-result-section" class="hidden">
+      <div class="result-header">
+        <div class="result-badge">✓ RELATÓRIO RESGATADO</div>
+        <div class="result-notice">🔥 Este relatório foi <strong>apagado do servidor</strong> no momento da leitura</div>
+      </div>
+
+      <div class="report-card">
+        <div class="report-sections" id="report-sections"></div>
+      </div>
+
+      <div class="result-actions">
+        <button id="copy-btn" class="btn-action btn-action--primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copiar para OS
+        </button>
+        <button id="btn-new-search" class="btn-action btn-action--secondary">
+          🔍 Buscar outro relatório
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
      SETTINGS MODAL
-     ═══════════════════════════════════════════ -->
-<div id="settings-modal" class="modal-overlay hidden">
+     ═══════════════════════════════════════════════════════════ -->
+<div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
   <div class="modal-box">
     <div class="modal-header">
-      <span class="modal-title">CONFIGURAR API</span>
-      <button class="modal-close" id="modal-close">✕</button>
+      <span class="modal-title" id="modal-title-text">CONFIGURAR API</span>
+      <button class="modal-close" id="modal-close" aria-label="Fechar">✕</button>
     </div>
     <div class="modal-body">
-      <p class="modal-desc">Insira sua chave da API do Google Gemini. Ela será salva apenas no armazenamento local deste navegador.</p>
+      <p class="modal-desc">
+        Insira sua chave da API do Google Gemini.<br>
+        Ela será salva <strong>apenas no armazenamento local</strong> deste aparelho.
+      </p>
       <div class="input-group">
-        <label class="input-label">GEMINI API KEY</label>
+        <label class="input-label" for="api-key-input">GEMINI API KEY</label>
         <div class="input-wrap">
-          <input type="password" id="api-key-input" class="api-input" placeholder="AIza..." />
-          <button class="toggle-vis" id="toggle-vis">👁</button>
+          <input type="password" id="api-key-input" class="api-input" placeholder="AIza..." autocomplete="off" />
+          <button class="toggle-vis" id="toggle-vis" type="button" aria-label="Mostrar/ocultar chave">👁</button>
         </div>
       </div>
       <div class="modal-actions">
-        <button id="save-key-btn" class="btn-save-key">Salvar Chave</button>
+        <button id="save-key-btn" class="btn-action btn-action--primary">Salvar Chave</button>
       </div>
       <div id="key-saved-msg" class="key-saved hidden">✓ Chave salva com sucesso!</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════
+<!-- ═══════════════════════════════════════════════════════════
      TOAST
-     ═══════════════════════════════════════════ -->
-<div id="toast" class="toast hidden"></div>
+     ═══════════════════════════════════════════════════════════ -->
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
 <script src="app.js"></script>
 </body>

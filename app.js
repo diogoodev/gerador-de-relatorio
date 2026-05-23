@@ -1,209 +1,16 @@
 /**
  * GR · Gerador de Relatório · app.js
- * Zero-Backend SPA for mechanic audio reporting
- * PC ↔ Mobile via PeerJS (WebRTC DataChannel)
- * Audio → Gemini API (PC side only)
+ * Arquitetura "Burn After Reading" — Vercel + Upstash Redis
+ * Celular: grava → Gemini → /api/save → PIN
+ * PC: digita PIN → /api/get (GETDEL) → relatório
  */
 
 'use strict';
 
-// ─── ROUTING ─────────────────────────────────────────────────────────────────
-const params   = new URLSearchParams(window.location.search);
-const targetId = params.get('peer');
+// ─── CONSTANTES ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'mechreport_gemini_key';
 
-if (targetId) {
-  initMobile(targetId);
-} else {
-  initPC();
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-//   PC INTERFACE
-// ═════════════════════════════════════════════════════════════════════════════
-function initPC() {
-  document.getElementById('pc-view').classList.remove('hidden');
-
-  // ── State ──────────────────────────────────────────────
-  let peer        = null;
-  let connection  = null;
-  let lastAudio   = null;
-  let lastRawText = '';
-
-  // ── DOM refs ───────────────────────────────────────────
-  const $peerId      = document.getElementById('pc-peer-id');
-  const $qrSkeleton  = document.getElementById('qr-skeleton');
-  const $qrCode      = document.getElementById('qr-code');
-  const $connDot     = document.getElementById('pc-conn-dot');
-  const $connLabel   = document.getElementById('pc-conn-label');
-  const $log         = document.getElementById('pc-log');
-  const $reportIdle  = document.getElementById('report-idle');
-  const $reportProc  = document.getElementById('report-processing');
-  const $reportErr   = document.getElementById('report-error');
-  const $reportRes   = document.getElementById('report-result');
-  const $reportStat  = document.getElementById('report-status');
-  const $sections    = document.getElementById('report-sections');
-  const $errMsg      = document.getElementById('error-message');
-  const $audioCard   = document.getElementById('audio-card');
-  const $audioPlayer = document.getElementById('audio-player');
-  const $audioMeta   = document.getElementById('audio-meta');
-  const $copyBtn     = document.getElementById('copy-btn');
-  const $clearBtn    = document.getElementById('clear-btn');
-  const $retryBtn    = document.getElementById('retry-btn');
-
-  // ── Settings Modal ─────────────────────────────────────
-  const $settingsBtn  = document.getElementById('settings-btn');
-  const $modal        = document.getElementById('settings-modal');
-  const $modalClose   = document.getElementById('modal-close');
-  const $apiInput     = document.getElementById('api-key-input');
-  const $toggleVis    = document.getElementById('toggle-vis');
-  const $saveKeyBtn   = document.getElementById('save-key-btn');
-  const $keySavedMsg  = document.getElementById('key-saved-msg');
-
-  const STORAGE_KEY = 'mechreport_gemini_key';
-
-  $settingsBtn.addEventListener('click', () => {
-    $apiInput.value = localStorage.getItem(STORAGE_KEY) || '';
-    $keySavedMsg.classList.add('hidden');
-    $modal.classList.remove('hidden');
-  });
-  $modalClose.addEventListener('click', () => $modal.classList.add('hidden'));
-  $modal.addEventListener('click', e => { if (e.target === $modal) $modal.classList.add('hidden'); });
-
-  $toggleVis.addEventListener('click', () => {
-    $apiInput.type = $apiInput.type === 'password' ? 'text' : 'password';
-  });
-
-  $saveKeyBtn.addEventListener('click', () => {
-    const key = $apiInput.value.trim();
-    if (!key) { showToast('Insira uma chave válida', 'error'); return; }
-    localStorage.setItem(STORAGE_KEY, key);
-    $keySavedMsg.classList.remove('hidden');
-    addLog('Chave API salva no localStorage', 'ok');
-    setTimeout(() => $modal.classList.add('hidden'), 1200);
-  });
-
-  // ── PeerJS setup ───────────────────────────────────────
-  const peerId = 'oficina-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-
-  addLog('Iniciando PeerJS...', 'info');
-
-  peer = new Peer(peerId, {
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
-    }
-  });
-
-  peer.on('open', id => {
-    $peerId.textContent = id;
-    addLog(`ID da baia gerado: ${id}`, 'ok');
-    generateQR(id);
-  });
-
-  peer.on('connection', conn => {
-    connection = conn;
-    setConnected(true, conn.peer);
-    addLog(`Celular conectado: ${conn.peer}`, 'ok');
-
-    conn.on('data', handleReceivedData);
-
-    conn.on('close', () => {
-      setConnected(false);
-      connection = null;
-      addLog('Celular desconectado', 'warn');
-    });
-
-    conn.on('error', err => {
-      addLog(`Erro na conexão: ${err.message}`, 'error');
-    });
-  });
-
-  peer.on('error', err => {
-    addLog(`Erro PeerJS: ${err.message}`, 'error');
-  });
-
-  // ── QR Code ────────────────────────────────────────────
-  function generateQR(id) {
-    const url = `${window.location.origin}${window.location.pathname}?peer=${id}`;
-    $qrSkeleton.classList.add('hidden');
-    $qrCode.classList.remove('hidden');
-
-    new QRCode($qrCode, {
-      text: url,
-      width: 200,
-      height: 200,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
-
-    addLog(`QR Code gerado → ${url}`, 'info');
-  }
-
-  // ── Connection UI ──────────────────────────────────────
-  function setConnected(connected, label = '') {
-    if (connected) {
-      $connDot.className = 'conn-dot connected';
-      $connLabel.textContent = `Conectado · ${label}`;
-    } else {
-      $connDot.className = 'conn-dot';
-      $connLabel.textContent = 'Aguardando celular';
-    }
-  }
-
-  // ── Receive Audio ──────────────────────────────────────
-  async function handleReceivedData(data) {
-    addLog(`Áudio recebido (${formatBytes(data.size || data.byteLength || 0)})`, 'ok');
-
-    // Build Blob
-    let blob;
-    if (data instanceof Blob) {
-      blob = data;
-    } else if (data instanceof ArrayBuffer) {
-      blob = new Blob([data], { type: 'audio/webm' });
-    } else {
-      // If it arrived as a raw buffer-like object
-      blob = new Blob([data]);
-    }
-
-    lastAudio = blob;
-
-    // Show audio player
-    const url = URL.createObjectURL(blob);
-    $audioPlayer.src = url;
-    $audioMeta.textContent = `Tamanho: ${formatBytes(blob.size)} · Tipo: ${blob.type || 'audio/webm'}`;
-    $audioCard.classList.remove('hidden');
-
-    // Start AI processing
-    await processWithGemini(blob);
-  }
-
-  // ── Gemini API (Streaming) ──────────────────────────────
-  async function processWithGemini(blob) {
-    const apiKey = localStorage.getItem(STORAGE_KEY);
-
-    if (!apiKey) {
-      showState('error', 'Chave da API Gemini não configurada. Clique no ícone ⚙ para inserir a chave.');
-      addLog('Erro: Chave API não encontrada', 'error');
-      return;
-    }
-
-    showState('processing');
-    addLog('Enviando áudio para Gemini...', 'info');
-
-    // Stream preview element
-    const $streamPreview = document.getElementById('stream-preview');
-    $streamPreview.textContent = '';
-    $streamPreview.classList.remove('hidden');
-
-    try {
-      // Convert Blob → Base64
-      const base64 = await blobToBase64(blob);
-      const mimeType = blob.type || 'audio/webm';
-
-      const prompt = `Você é um assistente de documentação técnica para uma oficina mecânica de concessionária. Sua tarefa é analisar o áudio com muita atenção, extrair TODAS as informações faladas e redigir um relatório de forma direta, correta e limpa, organizado nos tópicos abaixo.
+const GEMINI_PROMPT = `Você é um assistente de documentação técnica para uma oficina mecânica de concessionária. Sua tarefa é analisar o áudio com muita atenção, extrair TODAS as informações faladas e redigir um relatório de forma direta, correta e limpa, organizado nos tópicos abaixo.
 
 ESCRITA DIRETA E FIEL AO RELATO:
 - Redija o texto de forma clara, correta e profissional, porém MANTENHA o texto CONCISO e o mais próximo possível das palavras e do estilo prático falado pelo mecânico.
@@ -215,341 +22,96 @@ REGRA CRÍTICA SOBRE NÚMEROS E CÓDIGOS:
 
 REGRAS DE CONTEÚDO:
 - NÃO omita informações técnicas relevantes que foram ditas.
-- Não inclua nenhuma introdução ou explicação antes dos tópicos (como "Com base no áudio..."). Comece diretamente com "- RECLAMAÇÃO DO CLIENTE:".
+- Não inclua nenhuma introdução ou explicação antes dos tópicos (como "Com base no áudio..."). Comece diretamente com "- RECLAMACAO DO CLIENTE:".
 
 TÓPICOS OBRIGATÓRIOS:
-- RECLAMAÇÃO DO CLIENTE: OBRIGATORIAMENTE comece este tópico com a frase exata "O cliente alega" e complete com o problema ou sintoma relatado pelo cliente (ex: "O cliente alega ruído na roda do lado direito").
-- DIAGNÓSTICO: Descreva a análise técnica do mecânico, causa identificada, componentes afetados (folgas, avarias, etc.) e códigos das peças associadas.
-- SERVIÇO EXECUTADO: Detalhe o que já foi feito (inspeções, diagnósticos realizados, etc.) e ações planejadas/pendentes (aguardando peça, etc.). Só use "Não informado" se nada foi dito.
-- PEÇAS: Liste as peças necessárias ou solicitadas com seus códigos exatos.
+- RECLAMACAO DO CLIENTE: OBRIGATORIAMENTE comece este tópico com a frase exata "O cliente alega" e complete com o problema ou sintoma relatado pelo cliente (ex: "O cliente alega ruído na roda do lado direito").
+- DIAGNOSTICO: Descreva a análise técnica do mecânico, causa identificada, componentes afetados (folgas, avarias, etc.) e códigos das peças associadas.
+- SERVICO EXECUTADO: Detalhe o que já foi feito (inspeções, diagnósticos realizados, etc.) e ações planejadas/pendentes (aguardando peça, etc.). Só use "Não informado" se nada foi dito.
+- PECAS: Liste as peças necessárias ou solicitadas com seus códigos exatos.
 
 Se algum tópico realmente não foi mencionado no áudio, escreva "Não informado".`;
 
-      const body = {
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inlineData: {
-                  mimeType: mimeType,
-                  data: base64
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 8192
-        }
-      };
+const SECTION_MAP = {
+  'RECLAMACAO DO CLIENTE': { tag: 'tag-reclamacao', label: '🗣 RECLAMACAO DO CLIENTE' },
+  'DIAGNOSTICO':           { tag: 'tag-diagnostico', label: '🔍 DIAGNOSTICO'           },
+  'SERVICO EXECUTADO':     { tag: 'tag-servico',     label: '🔧 SERVICO EXECUTADO'     },
+  'PECAS':                 { tag: 'tag-pecas',       label: '📦 PECAS'                 },
+};
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        }
-      );
+// ─── INICIALIZAÇÃO ─────────────────────────────────────────────────────────────
+initSettings();
+initHome();
+initRecord();
+initRetrieve();
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.error?.message || `HTTP ${res.status}`);
-      }
-
-      // Read SSE stream
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let fullText = '';
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Process complete SSE events from buffer
-        const lines = buffer.split('\n');
-        buffer = lines.pop(); // keep incomplete line in buffer
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr || jsonStr === '[DONE]') continue;
-
-            try {
-              const chunk = JSON.parse(jsonStr);
-              const chunkText = chunk?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-              if (chunkText) {
-                fullText += chunkText;
-                $streamPreview.textContent = fullText;
-                $streamPreview.scrollTop = $streamPreview.scrollHeight;
-              }
-            } catch (parseErr) {
-              // Skip malformed JSON chunks
-            }
-          }
-        }
-      }
-
-      if (!fullText) throw new Error('Resposta vazia da API Gemini.');
-
-      // Normalize for NBS: uppercase + remove accents
-      const normalizedText = normalizeForNBS(fullText);
-      lastRawText = normalizedText;
-      $streamPreview.classList.add('hidden');
-      addLog('Relatório gerado com sucesso!', 'ok');
-      renderReport(normalizedText);
-
-    } catch (err) {
-      $streamPreview.classList.add('hidden');
-      addLog(`Erro Gemini: ${err.message}`, 'error');
-      showState('error', `Erro ao processar: ${err.message}`);
-    }
-  }
-
-  // ── Report Rendering ───────────────────────────────────
-  const SECTION_MAP = {
-    'RECLAMACAO DO CLIENTE': { tag: 'tag-reclamacao', label: '🗣 RECLAMACAO DO CLIENTE' },
-    'DIAGNOSTICO':           { tag: 'tag-diagnostico', label: '🔍 DIAGNOSTICO' },
-    'SERVICO EXECUTADO':     { tag: 'tag-servico',     label: '🔧 SERVICO EXECUTADO'    },
-    'PECAS':                 { tag: 'tag-pecas',       label: '📦 PECAS'                 }
-  };
-
-  function renderReport(text) {
-    $sections.innerHTML = '';
-
-    // Parse each section from AI output
-    const lines = text.split('\n');
-    let current = null;
-    const sections = {};
-
-    const KEYS = Object.keys(SECTION_MAP);
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      const matchedKey = KEYS.find(k => trimmed.startsWith(`- ${k}:`) || trimmed.startsWith(`${k}:`));
-      if (matchedKey) {
-        current = matchedKey;
-        let val = trimmed.replace(`- ${matchedKey}:`, '').replace(`${matchedKey}:`, '').trim();
-        sections[matchedKey] = val;
-      } else if (current && trimmed) {
-        sections[current] = (sections[current] + '\n' + trimmed).trim();
-      }
-    }
-
-    // Force "O CLIENTE ALEGA" format in RECLAMACAO DO CLIENTE
-    if (sections['RECLAMACAO DO CLIENTE']) {
-      let content = sections['RECLAMACAO DO CLIENTE'].trim();
-      const prefixRegex = /^(O\s+)?CLIENTE\s+(ALEG|RELAT|RECLAM|QUEIX|INFORM)[A-Z]*(\s+QUE)?\s*/i;
-      if (prefixRegex.test(content)) {
-        content = content.replace(prefixRegex, '');
-      }
-      sections['RECLAMACAO DO CLIENTE'] = 'O CLIENTE ALEGA ' + content;
-    }
-
-    // If parsing failed, show raw text
-    if (Object.keys(sections).length === 0) {
-      const el = document.createElement('div');
-      el.className = 'report-section';
-      el.innerHTML = `
-        <div class="section-tag">RELATÓRIO</div>
-        <div class="section-content">${escapeHTML(text)}</div>
-      `;
-      $sections.appendChild(el);
-    } else {
-      let cleanedText = '';
-      let renderedCount = 0;
-      KEYS.forEach((key, i) => {
-        const content = sections[key] || 'NAO INFORMADO';
-        
-        if (isNotMencionando(content)) {
-          return;
-        }
-        
-        cleanedText += `- ${key}:\n${content}\n`;
-        renderedCount++;
-        
-        const meta = SECTION_MAP[key];
-        const el = document.createElement('div');
-        el.className = 'report-section';
-        el.style.animationDelay = `${renderedCount * 0.1}s`;
-        el.innerHTML = `
-          <div class="section-tag ${meta.tag}">${meta.label}</div>
-          <div class="section-content">${escapeHTML(content)}</div>
-        `;
-        $sections.appendChild(el);
-      });
-      
-      if (renderedCount === 0) {
-        const el = document.createElement('div');
-        el.className = 'report-section';
-        el.innerHTML = `
-          <div class="section-tag tag-reclamacao">AVISO</div>
-          <div class="section-content">NENHUMA INFORMAÇÃO ESPECÍFICA DETECTADA NO ÁUDIO.</div>
-        `;
-        $sections.appendChild(el);
-      }
-      
-      lastRawText = cleanedText.trim();
-    }
-
-    showState('result');
-  }
-
-  // ── UI State Machine ───────────────────────────────────
-  function showState(state, msg = '') {
-    $reportIdle.classList.add('hidden');
-    $reportProc.classList.add('hidden');
-    $reportErr.classList.add('hidden');
-    $reportRes.classList.add('hidden');
-
-    const statusMap = {
-      idle:       '<span class="status-idle">Aguardando áudio do mecânico</span>',
-      processing: '<span class="status-busy">⌛ Processando com IA...</span>',
-      error:      '<span class="status-error">✕ Erro no processamento</span>',
-      result:     '<span class="status-done">✓ Relatório pronto</span>'
-    };
-    $reportStat.innerHTML = statusMap[state] || '';
-
-    if (state === 'idle')       { $reportIdle.classList.remove('hidden'); }
-    if (state === 'processing') { $reportProc.classList.remove('hidden'); }
-    if (state === 'error')      { $reportErr.classList.remove('hidden');  $errMsg.textContent = msg; }
-    if (state === 'result')     { $reportRes.classList.remove('hidden');  }
-  }
-
-  // ── Copy Button ────────────────────────────────────────
-  $copyBtn.addEventListener('click', async () => {
-    if (!lastRawText) return;
-    try {
-      await navigator.clipboard.writeText(lastRawText);
-      $copyBtn.textContent = '✓ Copiado!';
-      $copyBtn.classList.add('copied');
-      showToast('Relatório copiado para a área de transferência!', 'ok');
-      setTimeout(() => {
-        $copyBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar para OS`;
-        $copyBtn.classList.remove('copied');
-      }, 2000);
-    } catch {
-      showToast('Erro ao copiar. Selecione o texto manualmente.', 'error');
-    }
-  });
-
-  // ── Clear Button ───────────────────────────────────────
-  $clearBtn.addEventListener('click', () => {
-    lastRawText = '';
-    lastAudio = null;
-    $audioCard.classList.add('hidden');
-    $audioPlayer.src = '';
-    showState('idle');
-    addLog('Relatório limpo', 'info');
-  });
-
-  // ── Retry Button ───────────────────────────────────────
-  $retryBtn.addEventListener('click', () => {
-    if (lastAudio) {
-      processWithGemini(lastAudio);
-    } else {
-      showState('idle');
-    }
-  });
-
-  // ── Log ────────────────────────────────────────────────
-  function addLog(msg, type = 'info') {
-    const el = document.createElement('div');
-    el.className = `log-entry log-${type}`;
-    const ts = new Date().toLocaleTimeString('pt-BR', { hour12: false });
-    el.textContent = `[${ts}] ${msg}`;
-    $log.appendChild(el);
-    $log.scrollTop = $log.scrollHeight;
+// ═════════════════════════════════════════════════════════════════════════════
+//   NAVEGAÇÃO ENTRE TELAS
+// ═════════════════════════════════════════════════════════════════════════════
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+  const el = document.getElementById(`view-${name}`);
+  if (el) {
+    el.classList.remove('hidden');
+    window.scrollTo(0, 0);
   }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-//   MOBILE INTERFACE
+//   HOME
 // ═════════════════════════════════════════════════════════════════════════════
-function initMobile(targetPeerId) {
-  document.getElementById('mobile-view').classList.remove('hidden');
+function initHome() {
+  showView('home');
 
+  document.getElementById('btn-go-record').addEventListener('click', () => showView('record'));
+  document.getElementById('btn-go-retrieve').addEventListener('click', () => showView('retrieve'));
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//   TELA DE GRAVAÇÃO
+// ═════════════════════════════════════════════════════════════════════════════
+function initRecord() {
   // ── State ──────────────────────────────────────────────
-  let peer        = null;
-  let connection  = null;
-  let mediaRecorder = null;
-  let audioChunks = [];
-  let audioBlob   = null;
-  let timerInterval = null;
-  let seconds     = 0;
-  let analyser    = null;
-  let animFrame   = null;
+  let mediaRecorder  = null;
+  let audioChunks    = [];
+  let audioBlob      = null;
+  let timerInterval  = null;
+  let countdownInterval = null;
+  let seconds        = 0;
+  let analyser       = null;
+  let animFrame      = null;
+  let lastReportText = '';
 
   // ── DOM refs ───────────────────────────────────────────
-  const $connDot      = document.getElementById('mob-conn-dot');
-  const $connLabel    = document.getElementById('mob-conn-label');
-  const $targetId     = document.getElementById('mob-target-id');
-  const $recordBtn    = document.getElementById('record-btn');
-  const $recordIcon   = document.getElementById('record-icon');
-  const $stopIcon     = document.getElementById('stop-icon');
-  const $recordPulse  = document.getElementById('record-pulse');
-  const $recordHint   = document.getElementById('record-hint');
-  const $recordTimer  = document.getElementById('record-timer');
-  const $statusText   = document.getElementById('mob-status-text');
-  const $audioPreview = document.getElementById('mob-audio-preview');
-  const $mobPlayback  = document.getElementById('mob-playback');
-  const $sendBtn      = document.getElementById('mob-send-btn');
-  const $canvas       = document.getElementById('waveform-canvas');
-  const ctx           = $canvas.getContext('2d');
+  const $canvas        = document.getElementById('waveform-canvas');
+  const ctx            = $canvas.getContext('2d');
+  const $timer         = document.getElementById('record-timer');
+  const $recordBtn     = document.getElementById('record-btn');
+  const $micIcon       = document.getElementById('record-icon-mic');
+  const $stopIcon      = document.getElementById('record-icon-stop');
+  const $recordLabel   = document.getElementById('record-label');
+  const $audioPreview  = document.getElementById('audio-preview-wrap');
+  const $audioPlayback = document.getElementById('audio-playback');
+  const $btnProcess    = document.getElementById('btn-process');
+  const $recordSection = document.getElementById('record-section');
+  const $procSection   = document.getElementById('processing-section');
+  const $procLabel     = document.getElementById('proc-label');
+  const $streamPreview = document.getElementById('stream-preview');
+  const $pinSection    = document.getElementById('pin-section');
+  const $pinDigits     = [0,1,2,3].map(i => document.getElementById(`pin-d${i}`));
+  const $pinCountdown  = document.getElementById('pin-countdown');
+  const $errorSection  = document.getElementById('record-error-section');
+  const $errorMsg      = document.getElementById('record-error-msg');
+  const $btnRetry      = document.getElementById('btn-retry-record');
+  const $btnNewRecord  = document.getElementById('btn-new-record');
 
-  $targetId.textContent = targetPeerId;
-
-  // ── PeerJS ─────────────────────────────────────────────
-  peer = new Peer({
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
-    }
+  // ── Navegação ──────────────────────────────────────────
+  document.getElementById('back-from-record').addEventListener('click', () => {
+    resetRecordView();
+    showView('home');
   });
 
-  peer.on('open', myId => {
-    setStatus('connecting', 'Conectando à baia...');
-    $connDot.className = 'conn-dot connecting';
-
-    connection = peer.connect(targetPeerId, { reliable: true });
-
-    connection.on('open', () => {
-      setStatus('idle', 'Conectado! Pronto para gravar.');
-      $connDot.className = 'conn-dot connected';
-      $connLabel.textContent = `Conectado · ${targetPeerId}`;
-      $recordBtn.disabled = false;
-      $recordHint.textContent = 'Pressione para começar a gravar';
-    });
-
-    connection.on('close', () => {
-      setStatus('idle', 'Conexão encerrada');
-      $connDot.className = 'conn-dot';
-      $connLabel.textContent = 'Desconectado';
-      $recordBtn.disabled = true;
-      $recordHint.textContent = 'Conexão encerrada. Escaneie o QR novamente.';
-    });
-
-    connection.on('error', err => {
-      $connDot.className = 'conn-dot';
-      $connLabel.textContent = 'Erro de conexão';
-      $recordHint.textContent = `Erro: ${err.message}`;
-    });
-  });
-
-  peer.on('error', err => {
-    $connDot.className = 'conn-dot';
-    $connLabel.textContent = `Erro PeerJS`;
-    $recordHint.textContent = `Falha ao conectar: verifique a rede`;
-  });
-
-  // ── Record Button ──────────────────────────────────────
+  // ── Botão gravar ───────────────────────────────────────
   $recordBtn.addEventListener('click', async () => {
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       stopRecording();
@@ -558,11 +120,43 @@ function initMobile(targetPeerId) {
     }
   });
 
+  // ── Botão processar ────────────────────────────────────
+  $btnProcess.addEventListener('click', async () => {
+    if (!audioBlob) return;
+    const apiKey = localStorage.getItem(STORAGE_KEY);
+    if (!apiKey) {
+      showToast('Configure a chave Gemini antes de processar ⚙', 'error');
+      openSettingsModal();
+      return;
+    }
+    showRecordState('processing');
+    await processWithGemini(audioBlob, apiKey);
+  });
+
+  // ── Botão novo relatório ───────────────────────────────
+  $btnNewRecord.addEventListener('click', () => resetRecordView());
+
+  // ── Botão tentar novamente ─────────────────────────────
+  $btnRetry.addEventListener('click', async () => {
+    if (!audioBlob) {
+      resetRecordView();
+      return;
+    }
+    const apiKey = localStorage.getItem(STORAGE_KEY);
+    if (!apiKey) {
+      showToast('Configure a chave Gemini ⚙', 'error');
+      openSettingsModal();
+      return;
+    }
+    showRecordState('processing');
+    await processWithGemini(audioBlob, apiKey);
+  });
+
+  // ── Gravação ───────────────────────────────────────────
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Waveform analyser
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const source = audioCtx.createMediaStreamSource(stream);
       analyser = audioCtx.createAnalyser();
@@ -570,93 +164,212 @@ function initMobile(targetPeerId) {
       source.connect(analyser);
       drawWaveform();
 
-      // Prefer webm/opus, fallback to mp4
       const mimeType = getSupportedMimeType();
       audioChunks = [];
 
-      mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
       mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
       mediaRecorder.onstop = () => {
-        audioBlob = new Blob(audioChunks, { type: mimeType });
+        const finalMime = mimeType || 'audio/webm';
+        audioBlob = new Blob(audioChunks, { type: finalMime });
         const url = URL.createObjectURL(audioBlob);
-        $mobPlayback.src = url;
+        $audioPlayback.src = url;
         $audioPreview.classList.remove('hidden');
-        setStatus('idle', 'Gravação pronta — revise e envie');
+        $recordLabel.textContent = 'Gravação pronta. Revise e processe.';
         stream.getTracks().forEach(t => t.stop());
         cancelAnimationFrame(animFrame);
         clearWaveform();
       };
 
-      mediaRecorder.start(250); // collect every 250ms
+      mediaRecorder.start(250);
       startTimer();
 
-      // UI: recording mode
       $recordBtn.classList.add('recording');
-      $recordIcon.classList.add('hidden');
+      $micIcon.classList.add('hidden');
       $stopIcon.classList.remove('hidden');
-      $recordHint.textContent = 'Gravando... toque para parar';
       $audioPreview.classList.add('hidden');
-      setStatus('recording', '⏺ GRAVANDO');
+      $recordLabel.textContent = '⏺ Gravando... toque para parar';
 
     } catch (err) {
-      $recordHint.textContent = `Microfone negado: ${err.message}`;
-      showToast('Permita acesso ao microfone', 'error');
+      showToast('Permita acesso ao microfone nas configurações do navegador', 'error');
     }
   }
 
   function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    }
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
     stopTimer();
     $recordBtn.classList.remove('recording');
-    $recordIcon.classList.remove('hidden');
+    $micIcon.classList.remove('hidden');
     $stopIcon.classList.add('hidden');
-    $recordHint.textContent = 'Revise o áudio e envie para a baia';
   }
 
-  // ── Send Audio ─────────────────────────────────────────
-  $sendBtn.addEventListener('click', () => {
-    if (!audioBlob) return;
-    if (!connection || connection.open === false) {
-      showToast('Sem conexão com a baia!', 'error');
-      return;
-    }
-
-    setStatus('sending', 'Enviando áudio...');
-    $sendBtn.disabled = true;
-    $sendBtn.textContent = 'Enviando...';
+  // ── Gemini API (Streaming no celular) ──────────────────
+  async function processWithGemini(blob, apiKey) {
+    $procLabel.textContent = 'Transcrevendo áudio com IA...';
+    $streamPreview.textContent = '';
+    $streamPreview.classList.remove('hidden');
 
     try {
-      connection.send(audioBlob);
-      setStatus('sent', '✓ Áudio enviado! O PC está processando...');
-      $sendBtn.textContent = '✓ Enviado!';
-      showToast('Áudio enviado! Aguarde o relatório no PC.', 'ok');
-      seconds = 0;
-      $recordTimer.textContent = '00:00';
+      const base64 = await blobToBase64(blob);
+      const mimeType = blob.type || 'audio/webm';
+
+      const body = {
+        contents: [{
+          parts: [
+            { text: GEMINI_PROMPT },
+            { inlineData: { mimeType, data: base64 } }
+          ]
+        }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
+      };
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      );
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr || jsonStr === '[DONE]') continue;
+            try {
+              const chunk = JSON.parse(jsonStr);
+              const chunkText = chunk?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (chunkText) {
+                fullText += chunkText;
+                $streamPreview.textContent = fullText;
+                $streamPreview.scrollTop = $streamPreview.scrollHeight;
+              }
+            } catch { /* chunk inválido */ }
+          }
+        }
+      }
+
+      if (!fullText) throw new Error('Resposta vazia da API Gemini.');
+
+      const normalizedText = normalizeForNBS(fullText);
+      lastReportText = normalizedText;
+
+      // Salvar no Redis e gerar PIN
+      $procLabel.textContent = 'Salvando relatório e gerando PIN...';
+      $streamPreview.classList.add('hidden');
+      await saveAndGetPin(normalizedText);
+
     } catch (err) {
-      setStatus('idle', 'Erro ao enviar');
-      $sendBtn.disabled = false;
-      $sendBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Enviar para o PC`;
-      showToast(`Erro ao enviar: ${err.message}`, 'error');
+      showRecordState('error', err.message);
     }
-  });
+  }
+
+  // ── Salvar no Redis (/api/save) ────────────────────────
+  async function saveAndGetPin(reportText) {
+    try {
+      const res = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report: reportText }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      const pin = data.pin;
+      showPin(pin);
+    } catch (err) {
+      showRecordState('error', `Erro ao salvar relatório: ${err.message}`);
+    }
+  }
+
+  // ── Exibir PIN ─────────────────────────────────────────
+  function showPin(pin) {
+    const digits = String(pin).padStart(4, '0').split('');
+    $pinDigits.forEach((el, i) => { el.textContent = digits[i] || '—'; });
+    showRecordState('pin');
+
+    // Contagem regressiva de 10 minutos
+    let remaining = 600;
+    clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        $pinCountdown.textContent = '00:00';
+        return;
+      }
+      const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+      const s = String(remaining % 60).padStart(2, '0');
+      $pinCountdown.textContent = `${m}:${s}`;
+    }, 1000);
+  }
+
+  // ── Estados da tela de gravação ────────────────────────
+  function showRecordState(state, errorMsg = '') {
+    $recordSection.classList.add('hidden');
+    $procSection.classList.add('hidden');
+    $pinSection.classList.add('hidden');
+    $errorSection.classList.add('hidden');
+
+    switch (state) {
+      case 'recording': $recordSection.classList.remove('hidden'); break;
+      case 'processing': $procSection.classList.remove('hidden'); break;
+      case 'pin': $pinSection.classList.remove('hidden'); break;
+      case 'error':
+        $errorMsg.textContent = errorMsg;
+        $errorSection.classList.remove('hidden');
+        break;
+    }
+  }
+
+  // ── Reset ──────────────────────────────────────────────
+  function resetRecordView() {
+    clearInterval(countdownInterval);
+    stopTimer();
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    audioBlob = null;
+    audioChunks = [];
+    lastReportText = '';
+    $timer.textContent = '00:00';
+    $audioPlayback.src = '';
+    $audioPreview.classList.add('hidden');
+    $recordLabel.textContent = 'Toque para gravar';
+    $recordBtn.classList.remove('recording');
+    $micIcon.classList.remove('hidden');
+    $stopIcon.classList.add('hidden');
+    $streamPreview.textContent = '';
+    clearWaveform();
+    showRecordState('recording');
+  }
 
   // ── Timer ──────────────────────────────────────────────
   function startTimer() {
     seconds = 0;
-    $recordTimer.textContent = '00:00';
+    $timer.textContent = '00:00';
     timerInterval = setInterval(() => {
       seconds++;
       const m = String(Math.floor(seconds / 60)).padStart(2, '0');
       const s = String(seconds % 60).padStart(2, '0');
-      $recordTimer.textContent = `${m}:${s}`;
+      $timer.textContent = `${m}:${s}`;
     }, 1000);
   }
 
-  function stopTimer() {
-    clearInterval(timerInterval);
-  }
+  function stopTimer() { clearInterval(timerInterval); }
 
   // ── Waveform ───────────────────────────────────────────
   function drawWaveform() {
@@ -667,18 +380,17 @@ function initMobile(targetPeerId) {
 
     const W = $canvas.width;
     const H = $canvas.height;
-    ctx.fillStyle = 'rgba(20, 23, 32, 0.4)';
+    ctx.fillStyle = 'rgba(248, 249, 250, 0.8)';
     ctx.fillRect(0, 0, W, H);
 
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#f5a623';
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = '#f5a623';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#D97706';
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = '#F59E0B';
     ctx.beginPath();
 
     const sliceWidth = W / bufferLength;
     let x = 0;
-
     for (let i = 0; i < bufferLength; i++) {
       const v = dataArray[i] / 128.0;
       const y = v * H / 2;
@@ -686,73 +398,263 @@ function initMobile(targetPeerId) {
       else ctx.lineTo(x, y);
       x += sliceWidth;
     }
-
     ctx.lineTo(W, H / 2);
     ctx.stroke();
     ctx.shadowBlur = 0;
   }
 
   function clearWaveform() {
-    ctx.fillStyle = 'rgba(20, 23, 32, 1)';
+    ctx.fillStyle = '#F1F5F9';
     ctx.fillRect(0, 0, $canvas.width, $canvas.height);
-
-    // Draw flat line
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = '#2a2f42';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#CBD5E1';
     ctx.beginPath();
     ctx.moveTo(0, $canvas.height / 2);
     ctx.lineTo($canvas.width, $canvas.height / 2);
     ctx.stroke();
   }
 
-  // ── Status ─────────────────────────────────────────────
-  function setStatus(state, msg) {
-    $statusText.textContent = msg;
-    $statusText.className = '';
-    const cls = {
-      idle: 'mob-status-idle',
-      recording: 'mob-status-recording',
-      sending: 'mob-status-sending',
-      sent: 'mob-status-sent',
-      connecting: 'mob-status-idle'
-    };
-    $statusText.classList.add(cls[state] || 'mob-status-idle');
-  }
-
   clearWaveform();
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-//   SHARED UTILITIES
+//   TELA DE RESGATE
+// ═════════════════════════════════════════════════════════════════════════════
+function initRetrieve() {
+  let lastRawText = '';
+
+  const $inputSection  = document.getElementById('retrieve-input-section');
+  const $loadingDiv    = document.getElementById('retrieve-loading');
+  const $resultSection = document.getElementById('retrieve-result-section');
+  const $pinInput      = document.getElementById('pin-input');
+  const $btnFetch      = document.getElementById('btn-fetch');
+  const $errorDiv      = document.getElementById('retrieve-error');
+  const $reportSections = document.getElementById('report-sections');
+  const $copyBtn       = document.getElementById('copy-btn');
+  const $btnNewSearch  = document.getElementById('btn-new-search');
+
+  document.getElementById('back-from-retrieve').addEventListener('click', () => {
+    resetRetrieve();
+    showView('home');
+  });
+
+  // Formata o input do PIN (só números, máx 4)
+  $pinInput.addEventListener('input', () => {
+    $pinInput.value = $pinInput.value.replace(/\D/g, '').slice(0, 4);
+    $errorDiv.classList.add('hidden');
+    if ($pinInput.value.length === 4) {
+      $btnFetch.focus();
+    }
+  });
+
+  $pinInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && $pinInput.value.length === 4) fetchReport();
+  });
+
+  $btnFetch.addEventListener('click', () => fetchReport());
+
+  async function fetchReport() {
+    const pin = $pinInput.value.trim();
+    if (!/^\d{4}$/.test(pin)) {
+      showRetrieveError('Digite exatamente 4 dígitos.');
+      $pinInput.focus();
+      return;
+    }
+
+    showRetrieveState('loading');
+
+    try {
+      const res = await fetch(`/api/get?pin=${encodeURIComponent(pin)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        showRetrieveState('input');
+        showRetrieveError(data.error || 'PIN não encontrado ou expirado.');
+        return;
+      }
+
+      lastRawText = data.report || '';
+      renderReport(lastRawText);
+      showRetrieveState('result');
+
+    } catch (err) {
+      showRetrieveState('input');
+      showRetrieveError(`Erro de conexão: ${err.message}`);
+    }
+  }
+
+  // ── Renderizar relatório ────────────────────────────────
+  function renderReport(text) {
+    $reportSections.innerHTML = '';
+    const KEYS = Object.keys(SECTION_MAP);
+    const lines = text.split('\n');
+    let current = null;
+    const sections = {};
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      const matchedKey = KEYS.find(k => trimmed.startsWith(`- ${k}:`) || trimmed.startsWith(`${k}:`));
+      if (matchedKey) {
+        current = matchedKey;
+        const val = trimmed.replace(`- ${matchedKey}:`, '').replace(`${matchedKey}:`, '').trim();
+        sections[matchedKey] = val;
+      } else if (current && trimmed) {
+        sections[current] = (sections[current] + '\n' + trimmed).trim();
+      }
+    }
+
+    // Força "O CLIENTE ALEGA" na reclamação
+    if (sections['RECLAMACAO DO CLIENTE']) {
+      let content = sections['RECLAMACAO DO CLIENTE'].trim();
+      const prefixRegex = /^(O\s+)?CLIENTE\s+(ALEG|RELAT|RECLAM|QUEIX|INFORM)[A-Z]*(\s+QUE)?\s*/i;
+      if (prefixRegex.test(content)) content = content.replace(prefixRegex, '');
+      sections['RECLAMACAO DO CLIENTE'] = 'O CLIENTE ALEGA ' + content;
+    }
+
+    let cleanedText = '';
+    let renderedCount = 0;
+
+    if (Object.keys(sections).length === 0) {
+      $reportSections.innerHTML = `<div class="report-section"><div class="section-tag">RELATÓRIO</div><div class="section-content">${escapeHTML(text)}</div></div>`;
+      cleanedText = text;
+    } else {
+      KEYS.forEach(key => {
+        const content = sections[key] || 'NAO INFORMADO';
+        if (isNotMencionando(content)) return;
+
+        cleanedText += `- ${key}:\n${content}\n`;
+        renderedCount++;
+
+        const meta = SECTION_MAP[key];
+        const el = document.createElement('div');
+        el.className = 'report-section';
+        el.style.animationDelay = `${renderedCount * 0.08}s`;
+        el.innerHTML = `
+          <div class="section-tag ${meta.tag}">${meta.label}</div>
+          <div class="section-content">${escapeHTML(content)}</div>
+        `;
+        $reportSections.appendChild(el);
+      });
+
+      if (renderedCount === 0) {
+        $reportSections.innerHTML = `<div class="report-section"><div class="section-tag tag-reclamacao">AVISO</div><div class="section-content">NENHUMA INFORMAÇÃO ESPECÍFICA DETECTADA NO ÁUDIO.</div></div>`;
+      }
+    }
+
+    lastRawText = cleanedText.trim() || text;
+  }
+
+  // ── Copiar ─────────────────────────────────────────────
+  $copyBtn.addEventListener('click', async () => {
+    if (!lastRawText) return;
+    try {
+      await navigator.clipboard.writeText(lastRawText);
+      $copyBtn.innerHTML = `✓ Copiado!`;
+      $copyBtn.classList.add('copied');
+      showToast('Relatório copiado!', 'ok');
+      setTimeout(() => {
+        $copyBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar para OS`;
+        $copyBtn.classList.remove('copied');
+      }, 2000);
+    } catch {
+      showToast('Erro ao copiar. Selecione manualmente.', 'error');
+    }
+  });
+
+  $btnNewSearch.addEventListener('click', () => resetRetrieve());
+
+  // ── Helpers ─────────────────────────────────────────────
+  function showRetrieveState(state) {
+    $inputSection.classList.add('hidden');
+    $loadingDiv.classList.add('hidden');
+    $resultSection.classList.add('hidden');
+    if (state === 'input') $inputSection.classList.remove('hidden');
+    if (state === 'loading') $loadingDiv.classList.remove('hidden');
+    if (state === 'result') $resultSection.classList.remove('hidden');
+  }
+
+  function showRetrieveError(msg) {
+    $errorDiv.textContent = msg;
+    $errorDiv.classList.remove('hidden');
+  }
+
+  function resetRetrieve() {
+    lastRawText = '';
+    $pinInput.value = '';
+    $reportSections.innerHTML = '';
+    $errorDiv.classList.add('hidden');
+    showRetrieveState('input');
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//   SETTINGS MODAL
+// ═════════════════════════════════════════════════════════════════════════════
+function initSettings() {
+  const $modal      = document.getElementById('settings-modal');
+  const $apiInput   = document.getElementById('api-key-input');
+  const $toggleVis  = document.getElementById('toggle-vis');
+  const $saveBtn    = document.getElementById('save-key-btn');
+  const $savedMsg   = document.getElementById('key-saved-msg');
+  const $closeBtn   = document.getElementById('modal-close');
+
+  // Todos os botões de settings abrem o modal
+  ['settings-btn-home', 'settings-btn-record'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', openSettingsModal);
+  });
+
+  $closeBtn.addEventListener('click', closeSettingsModal);
+  $modal.addEventListener('click', e => { if (e.target === $modal) closeSettingsModal(); });
+
+  $toggleVis.addEventListener('click', () => {
+    $apiInput.type = $apiInput.type === 'password' ? 'text' : 'password';
+  });
+
+  $saveBtn.addEventListener('click', () => {
+    const key = $apiInput.value.trim();
+    if (!key) { showToast('Insira uma chave válida', 'error'); return; }
+    localStorage.setItem(STORAGE_KEY, key);
+    $savedMsg.classList.remove('hidden');
+    showToast('Chave API salva!', 'ok');
+    setTimeout(() => closeSettingsModal(), 1200);
+  });
+
+  function openSettingsModal() {
+    $apiInput.value = localStorage.getItem(STORAGE_KEY) || '';
+    $savedMsg.classList.add('hidden');
+    $modal.classList.remove('hidden');
+    $apiInput.focus();
+  }
+
+  function closeSettingsModal() {
+    $modal.classList.add('hidden');
+  }
+}
+
+// ── openSettingsModal global (usado no record) ──────────────────────────────
+function openSettingsModal() {
+  document.getElementById('settings-modal').classList.remove('hidden');
+  const $apiInput = document.getElementById('api-key-input');
+  $apiInput.value = localStorage.getItem(STORAGE_KEY) || '';
+  $apiInput.focus();
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//   UTILITÁRIOS COMPARTILHADOS
 // ═════════════════════════════════════════════════════════════════════════════
 
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result.split(',')[1];
-      resolve(base64);
-    };
+    reader.onloadend = () => resolve(reader.result.split(',')[1]);
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
 }
 
-function formatBytes(bytes) {
-  if (!bytes || bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
 function getSupportedMimeType() {
-  const types = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/mp4',
-  ];
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
   for (const type of types) {
     if (MediaRecorder.isTypeSupported(type)) return type;
   }
@@ -764,7 +666,8 @@ function escapeHTML(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/\n/g, '<br>');
 }
 
 function showToast(msg, type = 'info') {
@@ -775,7 +678,6 @@ function showToast(msg, type = 'info') {
 }
 
 function normalizeForNBS(text) {
-  // Remove accents/diacritics and convert to uppercase
   return text
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -790,4 +692,3 @@ function isNotMencionando(content) {
     .replace(/[.\s]/g, '');
   return normalized === 'NAOINFORMADO' || normalized === '';
 }
-
