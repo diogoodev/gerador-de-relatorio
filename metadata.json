@@ -1,0 +1,10 @@
+{
+  "name": "Gerador de Relatório",
+  "description": "Gerador de relatórios técnicos por voz para oficinas mecânicas.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

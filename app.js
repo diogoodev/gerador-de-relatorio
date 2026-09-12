@@ -120,14 +120,26 @@ function initRecord() {
     }
   });
 
+  let serverHasKey = false;
+  fetch('/api/config')
+    .then(r => r.json())
+    .then(data => { serverHasKey = !!data.hasServerKey; })
+    .catch(() => {});
+
   // ── Botão processar ────────────────────────────────────
   $btnProcess.addEventListener('click', async () => {
     if (!audioBlob) return;
     const apiKey = localStorage.getItem(STORAGE_KEY);
-    if (!apiKey) {
-      showToast('Configure a chave Gemini antes de processar ⚙', 'error');
-      openSettingsModal();
-      return;
+    if (!apiKey && !serverHasKey) {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json());
+        serverHasKey = !!cfg.hasServerKey;
+      } catch {}
+      if (!serverHasKey) {
+        showToast('Configure a chave Gemini antes de processar ⚙', 'error');
+        openSettingsModal();
+        return;
+      }
     }
     showRecordState('processing');
     await processWithGemini(audioBlob, apiKey);
@@ -143,7 +155,7 @@ function initRecord() {
       return;
     }
     const apiKey = localStorage.getItem(STORAGE_KEY);
-    if (!apiKey) {
+    if (!apiKey && !serverHasKey) {
       showToast('Configure a chave Gemini ⚙', 'error');
       openSettingsModal();
       return;
@@ -203,7 +215,7 @@ function initRecord() {
     $stopIcon.classList.add('hidden');
   }
 
-  // ── Gemini API (Streaming no celular) ──────────────────
+  // ── Gemini API (Processamento de áudio via /api/gemini) ─
   async function processWithGemini(blob, apiKey) {
     $procLabel.textContent = 'Transcrevendo áudio com IA...';
     $streamPreview.textContent = '';
@@ -214,23 +226,21 @@ function initRecord() {
       const mimeType = blob.type || 'audio/webm';
 
       const body = {
-        contents: [{
-          parts: [
-            { text: GEMINI_PROMPT },
-            { inlineData: { mimeType, data: base64 } }
-          ]
-        }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
+        audioBase64: base64,
+        mimeType: mimeType,
+        prompt: GEMINI_PROMPT,
+        apiKey: apiKey || ''
       };
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-      );
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+        throw new Error(errData?.error || `HTTP ${res.status}`);
       }
 
       const reader = res.body.getReader();
@@ -251,13 +261,20 @@ function initRecord() {
             if (!jsonStr || jsonStr === '[DONE]') continue;
             try {
               const chunk = JSON.parse(jsonStr);
-              const chunkText = chunk?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (chunk.error) {
+                throw new Error(chunk.error);
+              }
+              const chunkText = chunk?.candidates?.[0]?.content?.parts?.[0]?.text || chunk?.text || '';
               if (chunkText) {
                 fullText += chunkText;
                 $streamPreview.textContent = fullText;
                 $streamPreview.scrollTop = $streamPreview.scrollHeight;
               }
-            } catch { /* chunk inválido */ }
+            } catch (parseErr) {
+              if (parseErr.message && !parseErr.message.includes('JSON')) {
+                throw parseErr;
+              }
+            }
           }
         }
       }
@@ -267,7 +284,7 @@ function initRecord() {
       const normalizedText = normalizeForNBS(fullText);
       lastReportText = normalizedText;
 
-      // Salvar no Redis e gerar PIN
+      // Salvar no Redis / armazenamento local e gerar PIN
       $procLabel.textContent = 'Salvando relatório e gerando PIN...';
       $streamPreview.classList.add('hidden');
       await saveAndGetPin(normalizedText);

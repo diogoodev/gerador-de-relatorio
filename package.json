@@ -1,0 +1,16 @@
+{
+  "name": "gerador-de-relatorio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gerador de relatórios técnicos por voz para oficinas mecânicas.",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "@google/genai": "latest",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

@@ -25,12 +25,18 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'PIN inválido. Digite exatamente 4 dígitos.' });
   }
 
+  const store = require('./store');
   const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
   const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!REDIS_URL || !REDIS_TOKEN) {
-    console.error('Variáveis de ambiente do Upstash não configuradas');
-    return res.status(500).json({ error: 'Servidor não configurado corretamente' });
+    const report = store.getDelPin(pin);
+    if (!report) {
+      return res.status(404).json({
+        error: 'PIN não encontrado. Pode ter expirado (10 min) ou já foi resgatado.',
+      });
+    }
+    return res.status(200).json({ report });
   }
 
   const key = `pin:${pin}`;
@@ -48,7 +54,11 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Erro Upstash:', errText);
+      console.warn('Erro Upstash, verificando armazenamento local:', errText);
+      const localReport = store.getDelPin(pin);
+      if (localReport) {
+        return res.status(200).json({ report: localReport });
+      }
       return res.status(500).json({ error: 'Erro ao buscar no servidor' });
     }
 
@@ -56,6 +66,12 @@ module.exports = async function handler(req, res) {
     const report = data.result; // null se não existir
 
     if (!report) {
+      // Também verifica localmente como fallback
+      const localReport = store.getDelPin(pin);
+      if (localReport) {
+        return res.status(200).json({ report: localReport });
+      }
+
       return res.status(404).json({
         error: 'PIN não encontrado. Pode ter expirado (10 min) ou já foi resgatado.',
       });
@@ -63,7 +79,11 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({ report });
   } catch (err) {
-    console.error('Erro interno:', err.message);
+    console.warn('Erro interno Upstash, tentando armazenamento local:', err.message);
+    const localReport = store.getDelPin(pin);
+    if (localReport) {
+      return res.status(200).json({ report: localReport });
+    }
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };

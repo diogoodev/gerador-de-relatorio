@@ -25,17 +25,19 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Relatório não pode estar vazio' });
   }
 
+  const store = require('./store');
   const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
   const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  if (!REDIS_URL || !REDIS_TOKEN) {
-    console.error('Variáveis de ambiente do Upstash não configuradas');
-    return res.status(500).json({ error: 'Servidor não configurado corretamente' });
-  }
 
   // Gera PIN de 4 dígitos com zero-padding (ex: "0042")
   const pin = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
   const key = `pin:${pin}`;
+
+  if (!REDIS_URL || !REDIS_TOKEN) {
+    // In-memory fallback
+    store.savePin(pin, report.trim(), 600);
+    return res.status(200).json({ pin });
+  }
 
   try {
     // Upstash REST API: comando ["SET", key, value, "EX", ttl_em_segundos]
@@ -50,13 +52,15 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Erro Upstash:', errText);
-      return res.status(500).json({ error: 'Falha ao salvar no servidor' });
+      console.warn('Erro Upstash, usando armazenamento local:', errText);
+      store.savePin(pin, report.trim(), 600);
+      return res.status(200).json({ pin });
     }
 
     return res.status(200).json({ pin });
   } catch (err) {
-    console.error('Erro interno:', err.message);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+    console.warn('Erro ao conectar ao Upstash, usando armazenamento local:', err.message);
+    store.savePin(pin, report.trim(), 600);
+    return res.status(200).json({ pin });
   }
 };
